@@ -26,35 +26,40 @@ def draw_czsc(data = None):
         dates = [datetime.datetime(*time.strptime(i, '%Y-%m-%d')[:6]) for i in data.index]
         data['t'] = mdates.date2num(dates)
 
-    ddata = zip(np.array(data.t), np.array(data.open), np.array(data.close), np.array(data.high), np.array(data.low), np.array(data.volume))
     fig, axes = plt.subplots(2, 1, sharex=True)
-
+    # Before clear
+    ddata = zip(np.array(data.t), np.array(data.open), np.array(data.close), np.array(data.high), np.array(data.low), np.array(data.volume))
     mpf.candlestick_ochl(axes[0], ddata, width=0.6, colorup='r', colordown='g')
-    axes[0].set_ylabel('price')
-    axes[0].grid(True)
     axes[0].xaxis_date()
-    axes[0].autoscale_view()
+    axes[0].set_title('Before clear')
+    p_b_data = sa.find_possible_peak_buttom(data)
+    p_data = p_b_data[p_b_data.type == 'peak']
+    b_data = p_b_data[p_b_data.type == 'buttom']
+    axes[0].plot(np.array(p_data.t), np.array(p_data.high), 'v')
+    axes[0].plot(np.array(b_data.t), np.array(b_data.low), '^')
+    # After clear
+    c_data = sa.clear_data(data)
+    ddata = zip(np.array(c_data.t), np.array(c_data.open), np.array(c_data.close), np.array(c_data.high), np.array(c_data.low), np.array(c_data.volume))
+    mpf.candlestick_ochl(axes[1], ddata, width=0.6, colorup='r', colordown='g')
+    axes[1].xaxis_date()
+    axes[1].set_title('After clear')
+    p_b_data = sa.find_possible_peak_buttom(c_data)
+    p_data = p_b_data[p_b_data.type == 'peak']
+    b_data = p_b_data[p_b_data.type == 'buttom']
 
-    print("data columns before find: %s" % data.columns)
-    czsc_data = sa.find_peak_buttom(data)
-    print("data columns after find: %s" % data.columns)
-
-    sa.tag_peak_buttom(data)
-    print("data columns after tag: %s" % data.columns)
-    czsc_data = data[data.line != 0]
-    print(len(czsc_data))
-    print("czsc_data columns: %s" % czsc_data.columns)
     data.set_index('t')
-    # data['line'].plot(ax = axes[0], kind='line')
-    axes[0].plot(np.array(czsc_data.t), np.array(czsc_data.line))
-    axes[1].plot(np.array(czsc_data.t), np.array(czsc_data.line))
-    print(czsc_data['line'])
+    axes[1].plot(np.array(p_data.t), np.array(p_data.high), 'v')
+    axes[1].plot(np.array(b_data.t), np.array(b_data.low), '^')
+
+    czsc_data = sa.tech_analysis(p_b_data)
+    line_data = czsc_data[~np.isnan(czsc_data.line)]
+    print(line_data['line'])
+    axes[1].plot(np.array(line_data.t), np.array(line_data.line))
+
     plt.show()
 
-
-
 def main():
-    data = ts.get_hist_data('002047','2016-01-01').sort_index()
+    data = ts.get_hist_data('002047','2015-06-01','2016-03-01').sort_index()
     draw_czsc(data)
 
 

@@ -45,7 +45,7 @@ def clear_data(data = None):
     #return data.drop(data[data.tag == 'delete'].index), len(data[data.tag == 'delete'])
     return data.drop(data[data.tag == 'delete'].index)
 
-def find_peak_buttom(data = None):
+def find_possible_peak_buttom(data = None):
     """寻找和标识顶和底，数据类型应该是tushare.get_hist_data获得的dataFrame格式"""
     if data is None:
         return None
@@ -76,20 +76,36 @@ def tag_peak_buttom(data = None):
     for i in range(1, len(data) - 1):
         # 根据当前状态找3个phase之外的顶或底
         if current_state == 'peak':
-            if data[i: i+1].type[0] == 'buttom' and count>=3:
-                data.loc[data[i:i+1].index[0], 'tag'] = 'buttom'
-                data.loc[data[i:i+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'low']
-                current_state = 'buttom'
-                count = 0
+            if data[i: i+1].type[0] == 'buttom' and count >= 3:
+                count_b = 0
+                for j in range(i, len(data) - 1):
+                    if data[j: j+1].type[0] == 'peak' and count_b >= 3:
+                        data.loc[data[i:i+1].index[0], 'tag'] = 'buttom'
+                        data.loc[data[i:i+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'low']
+                        current_state = 'buttom'
+                        count = 0
+                    elif data[j: j+1].type[0] == 'buttom' and (float(data[j: j+1].low) < float(data[i: i+1].low)):
+                        i = j
+                        break
+                    else:
+                        count_b += 1
             else:
                 data.loc[data[i:i+1].index[0], 'tag'] = 'phase'
                 count += 1
         elif current_state == 'buttom':
-            if data[i: i+1].type[0] == 'peak' and count>=3:
-                data.loc[data[i:i+1].index[0], 'tag'] = 'peak'
-                data.loc[data[i:i+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'high']
-                current_state = 'peak'
-                count = 0
+            if data[i: i+1].type[0] == 'peak' and count >= 3:
+                count_b = 0
+                for j in range(i, len(data) - 1):
+                    if data[j: j+1].type[0] == 'buttom' and count_b >= 3:
+                        data.loc[data[i:i+1].index[0], 'tag'] = 'peak'
+                        data.loc[data[i:i+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'high']
+                        current_state = 'peak'
+                        count = 0
+                    elif data[j: j+1].type[0] == 'peak' and (float(data[j: j+1].low) > float(data[i: i+1].low)):
+                        i = j
+                        break
+                    else:
+                        count_b += 1
             else:
                 data.loc[data[i:i+1].index[0], 'tag'] = 'phase'
                 count += 1
@@ -171,7 +187,7 @@ def main():
     draw_data(data)
     data1 = clear_data(data)
     print(data1)
-    #data2 = find_peak_buttom(data1)
+    #data2 = find_possible_peak_buttom(data1)
     #print(data2)
     #draw_data(data)
     #data3 = tech_analysis(data2)
