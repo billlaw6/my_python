@@ -45,28 +45,27 @@ def clear_data(data = None):
     #return data.drop(data[data.tag == 'delete'].index), len(data[data.tag == 'delete'])
     return data.drop(data[data.tag == 'delete'].index)
 
-def find_possible_peak_buttom(data = None):
+def find_possible_ding_di(data = None):
     """寻找和标识顶和底，数据类型应该是tushare.get_hist_data获得的dataFrame格式"""
     if data is None:
         return None
 
-    for i in range(0, len(data)-3):
-        window = data[i:i+3]
-        if float(window[1:2].high) > float(window[0:1].high) \
-        and float(window[1:2].high) > float(window[2:3].high) \
-        and float(window[1:2].low) > float(window[0:1].low) \
-        and float(window[1:2].low) > float(window[2:3].low):
-            data.loc[window[1:2].index[0], 'type'] = 'peak'
-        elif float(window[1:2].high) < float(window[0:1].high) \
-        and float(window[1:2].high) < float(window[2:3].high) \
-        and float(window[1:2].low) < float(window[0:1].low) \
-        and float(window[1:2].low) < float(window[2:3].low):
-            data.loc[window[1:2].index[0], 'type'] = 'buttom'
+    for i in range(1, len(data)-3):
+        if float(data[i: i + 1].high) > float(data[i - 1: i].high) \
+        and float(data[i: i + 1].high) > float(data[i + 1: i + 2].high) \
+        and float(data[i: i + 1].low) > float(data[i - 1: i].low) \
+        and float(data[i: i + 1].low) > float(data[i + 1: i + 2].low):
+            data.loc[data[i: i + 1].index[0], 'type'] = 'ding'
+        elif float(data[i: i + 1].high) < float(data[i - 1: i].high) \
+        and float(data[i: i + 1].high) < float(data[i + 1: i + 2].high) \
+        and float(data[i: i + 1].low) < float(data[i - 1: i].low) \
+        and float(data[i: i + 1].low) < float(data[i + 1: i + 2].low):
+            data.loc[data[i: i + 1].index[0], 'type'] = 'di'
         else:
-            data.loc[window[1:2].index[0], 'type'] = 'phase'
+            data.loc[data[i: i + 1].index[0], 'type'] = 'phase'
     return data
 
-def tag_peak_buttom(data = None):
+def tag_ding_di(data = None):
     """标记有效的顶和底，参数为清理并初标了顶和底，以最高顶为起点的数据。"""
     # 记录当前有效标记为顶还是底，以便明确接下来寻找的标记。
     current_state = data[0:1].type[0]
@@ -75,16 +74,16 @@ def tag_peak_buttom(data = None):
     count = 0
     for i in range(1, len(data) - 1):
         # 根据当前状态找3个phase之外的顶或底
-        if current_state == 'peak':
-            if data[i: i+1].type[0] == 'buttom' and count >= 3:
+        if current_state == 'ding':
+            if data[i: i+1].type[0] == 'di' and count >= 3:
                 count_b = 0
                 for j in range(i, len(data) - 1):
-                    if data[j: j+1].type[0] == 'peak' and count_b >= 3:
-                        data.loc[data[i:i+1].index[0], 'tag'] = 'buttom'
+                    if data[j: j+1].type[0] == 'ding' and count_b >= 3:
+                        data.loc[data[i:i+1].index[0], 'tag'] = 'di'
                         data.loc[data[i:i+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'low']
-                        current_state = 'buttom'
+                        current_state = 'di'
                         count = 0
-                    elif data[j: j+1].type[0] == 'buttom' and (float(data[j: j+1].low) < float(data[i: i+1].low)):
+                    elif data[j: j+1].type[0] == 'di' and (float(data[j: j+1].low) < float(data[i: i+1].low)):
                         i = j
                         break
                     else:
@@ -92,20 +91,93 @@ def tag_peak_buttom(data = None):
             else:
                 data.loc[data[i:i+1].index[0], 'tag'] = 'phase'
                 count += 1
-        elif current_state == 'buttom':
-            if data[i: i+1].type[0] == 'peak' and count >= 3:
+        elif current_state == 'di':
+            if data[i: i+1].type[0] == 'ding' and count >= 3:
                 count_b = 0
                 for j in range(i, len(data) - 1):
-                    if data[j: j+1].type[0] == 'buttom' and count_b >= 3:
-                        data.loc[data[i:i+1].index[0], 'tag'] = 'peak'
+                    if data[j: j+1].type[0] == 'di' and count_b >= 3:
+                        data.loc[data[i:i+1].index[0], 'tag'] = 'ding'
                         data.loc[data[i:i+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'high']
-                        current_state = 'peak'
+                        current_state = 'ding'
                         count = 0
-                    elif data[j: j+1].type[0] == 'peak' and (float(data[j: j+1].low) > float(data[i: i+1].low)):
+                    elif data[j: j+1].type[0] == 'ding' and (float(data[j: j+1].low) > float(data[i: i+1].low)):
                         i = j
                         break
                     else:
                         count_b += 1
+            else:
+                data.loc[data[i:i+1].index[0], 'tag'] = 'phase'
+                count += 1
+    return data
+
+def tag_ding_di_t(data = None):
+    """按时间顺序标顶和底"""
+    if data is None:
+        return None
+
+    # 找到首个可能的顶或底，由此开始找后续的顶或底判断当前顶或底是否成立
+    for i in range(0, len(data) - 1):
+        if data[i: i+1].type[0] == 'ding' or data[i: i+1].type[0] == 'di':
+            current_type = data[i: i+1].type[0]
+            start_index = i
+            print("date: %s, start_index: %s, type: %s" % (data[start_index: start_index+1].index, start_index, data[start_index: start_index+1].type[0]))
+            break
+
+    # 有效间隔数量
+    count = 0
+    for i in range(start_index + 1, len(data) - 1):
+        # 根据当前状态找3个phase之外的顶或底
+        if current_type == 'ding':
+            if data[i: i+1].type[0] == 'di' and count >= 3:
+                count_b = 0
+                for j in range(i, len(data) - 1):
+                    if data[j: j+1].type[0] == 'ding' and count_b >= 3:
+                        data.loc[data[i:i+1].index[0], 'tag'] = 'di'
+                        data.loc[data[start_index:start_index+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'high']
+                        data.loc[data[i:i+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'low']
+                        current_type = 'di'
+                        count = 0
+                    elif data[j: j+1].type[0] == 'di' and (float(data[j: j+1].low) < float(data[i: i+1].low)):
+                        i = j
+                        break
+                    else:
+                        count_b += 1
+            elif data[i: i+1].type[0] == 'di':
+                start_index = i
+                current_type = data[i: i+1].type[0]
+                print("New start ___ date: %s, start_index: %s, type: %s, current_type: %s" % (data[start_index: start_index+1].index, start_index, data[start_index: start_index+1].type[0], current_type))
+                continue
+            elif data[i: i+1].type[0] == 'ding' and (float(data[i: i+1].high) >= float(data[start_index: start_index+1].high)):
+                start_index = i
+                current_type = data[i: i+1].type[0]
+                print("New start ___ date: %s, start_index: %s, type: %s, current_type: %s" % (data[start_index: start_index+1].index, start_index, data[start_index: start_index+1].type[0], current_type))
+                continue
+            else:
+                data.loc[data[i:i+1].index[0], 'tag'] = 'phase'
+                count += 1
+        elif current_type == 'di':
+            if data[i: i+1].type[0] == 'ding' and count >= 3:
+                count_b = 0
+                for j in range(i, len(data) - 1):
+                    if data[j: j+1].type[0] == 'di' and count_b >= 3:
+                        data.loc[data[i:i+1].index[0], 'tag'] = 'ding'
+                        data.loc[data[start_index:start_index+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'low']
+                        data.loc[data[i:i+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'high']
+                        current_type = 'ding'
+                        count = 0
+                    elif data[j: j+1].type[0] == 'ding' and (float(data[j: j+1].low) > float(data[i: i+1].low)):
+                        i = j
+                        break
+                    else:
+                        count_b += 1
+            elif data[i: i+1].type[0] == 'di':
+                start_index = i
+                current_type = data[i: i+1].type[0]
+                print("New start ___ date: %s, start_index: %s, type: %s" % (data[start_index: start_index+1].index, start_index, data[start_index: start_index+1].type[0]))
+            elif data[i: i+1].type[0] == 'di' and (float(data[i: i+1].low) >= float(data[start_index: start_index+1].low)):
+                start_index = i
+                current_type = data[i: i+1].type[0]
+                print("New start ___ date: %s, start_index: %s, type: %s" % (data[start_index: start_index+1].index, start_index, data[start_index: start_index+1].type[0]))
             else:
                 data.loc[data[i:i+1].index[0], 'tag'] = 'phase'
                 count += 1
@@ -119,20 +191,20 @@ def tech_analysis(data = None):
     # 取最大的顶为起始往两边标识有效顶和底
     start_index = data[0:1].index[0]
     end_index = data[len(data)-1:len(data)].index[0]
-    start_peak = data.loc[data[data.type=='peak'].groupby('type')['high'].idxmax()].index[0]
-    print("start_peak: %s" % start_peak)
-    data.loc[start_peak, 'tag'] = 'peak'
-    data_a = data[start_index: start_peak].sort_index(ascending=False)
-    data_b = data[start_peak: end_index]
+    start_ding = data.loc[data[data.type=='ding'].groupby('type')['high'].idxmax()].index[0]
+    print("start_ding: %s" % start_ding)
+    data.loc[start_ding, 'tag'] = 'ding'
+    data_a = data[start_index: start_ding].sort_index(ascending=False)
+    data_b = data[start_ding: end_index]
     #print("data a: %s" % data_a)
     #print("data b: %s" % data_b)
 
     # 用原来标识删除的tag字段标识有效的顶和底
     # 首先标识起始点
-    data.loc[start_peak, 'tag'] = 'peak'
+    data.loc[start_ding, 'tag'] = 'ding'
     # 由起始点往两边标识顶和底
-    data_a1 = tag_peak_buttom(data_a)
-    data_b1 = tag_peak_buttom(data_b)
+    data_a1 = tag_ding_di(data_a)
+    data_b1 = tag_ding_di(data_b)
     #print("data a1: %s" % data_a1)
     #print("data b1: %s" % data_b1)
     # pd.concat([obj1, obj2], axis=1)
@@ -187,7 +259,7 @@ def main():
     draw_data(data)
     data1 = clear_data(data)
     print(data1)
-    #data2 = find_possible_peak_buttom(data1)
+    #data2 = find_possible_ding_di(data1)
     #print(data2)
     #draw_data(data)
     #data3 = tech_analysis(data2)
