@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.finance as mpf
 import numpy as np
-import stock_auto as sa
+import stock_czsc_tools as sct
 
 
 plt.rcParams['font.family'] = ['sans-serif'] # 用来正常显示中文标签
@@ -32,26 +32,25 @@ def draw_czsc(data = None):
     mpf.candlestick_ochl(axes[0], ddata, width=0.6, colorup='r', colordown='g')
     axes[0].xaxis_date()
     axes[0].set_title('Before clear')
-    p_b_data = sa.find_possible_ding_di(data)
-    p_data = p_b_data[p_b_data.type == 'ding']
-    b_data = p_b_data[p_b_data.type == 'di']
-    axes[0].plot(np.array(p_data.t), np.array(p_data.high), 'v')
-    axes[0].plot(np.array(b_data.t), np.array(b_data.low), '^')
+    # p_b_data = sct.find_possible_ding_di(data)
+    # p_data = p_b_data[p_b_data.fenxing == 'ding']
+    # b_data = p_b_data[p_b_data.fenxing == 'di']
+    # axes[0].plot(np.array(p_data.t), np.array(p_data.high), 'v')
+    # axes[0].plot(np.array(b_data.t), np.array(b_data.low), '^')
     # After clear
-    cdata = sa.clear_data(data)
+    cdata = sct.baohan_process(data)
+    # print(cdata)
     c_ddata = zip(np.array(cdata.t), np.array(cdata.open), np.array(cdata.close), np.array(cdata.high), np.array(cdata.low), np.array(cdata.volume))
     mpf.candlestick_ochl(axes[1], c_ddata, width=0.6, colorup='r', colordown='g')
     axes[1].xaxis_date()
     axes[1].set_title('After clear')
-    p_b_cdata = sa.find_possible_ding_di(cdata)
-    p_cdata = p_b_cdata[p_b_cdata.type == 'ding']
-    b_cdata = p_b_cdata[p_b_cdata.type == 'di']
+    p_b_cdata = sct.find_possible_ding_di(cdata)
+    p_cdata = p_b_cdata[p_b_cdata.fenxing == 'ding']
+    b_cdata = p_b_cdata[p_b_cdata.fenxing == 'di']
     axes[1].plot(np.array(p_cdata.t), np.array(p_cdata.high), 'v')
     axes[1].plot(np.array(b_cdata.t), np.array(b_cdata.low), '^')
-    data.set_index('t')
 
-    #czsc_data = sa.tech_analysis(cdata)
-    czsc_data = sa.tag_ding_di_t(cdata)
+    czsc_data = sct.tag_ding_di(cdata)
     line_data = czsc_data[~np.isnan(czsc_data.line)]
     print(line_data['line'])
     axes[1].plot(np.array(line_data.t), np.array(line_data.line))
@@ -59,7 +58,7 @@ def draw_czsc(data = None):
     plt.show()
 
 def main():
-    data = ts.get_hist_data('002047','2015-02-01','2016-03-01').sort_index()
+    data = ts.get_hist_data('sz','2014-01-01', ktype='M').sort_index()
     draw_czsc(data)
 
 
