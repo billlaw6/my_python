@@ -104,9 +104,10 @@ def tag_ding_di(data = None):
             break
 
     # 有效间隔数量
-    count = 0
+    interval_ding = 0
+    interval_di = 0
     for i in range(start_index + 1, len(data) - 1):
-        # 根据当前状态找3个phase之外的顶或底
+        # 根据当前状态找3根K线外的顶或底
         if current_fenxing == 'ding':
             if data[i: i+1].fenxing[0] == 'di' and count >= 3:
                 count_b = 0
@@ -140,7 +141,9 @@ def tag_ding_di(data = None):
                 data.loc[data[i:i+1].index[0], 'tag'] = 'phase'
                 count += 1
         elif current_fenxing == 'di':
-            if data[i: i+1].fenxing[0] == 'ding' and count >= 3:
+            if data[i: i+1].fenxing[0] == 'ding' and count < 3:
+                interval_di += 1
+                current_fenxing == 'ding'
                 count_b = 0
                 for j in range(i, len(data) - 1):
                     if data[j: j+1].fenxing[0] == 'di' and count_b >= 3:

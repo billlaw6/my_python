@@ -50,15 +50,16 @@ def draw_czsc(data = None):
     axes[1].plot(np.array(p_cdata.t), np.array(p_cdata.high), 'v')
     axes[1].plot(np.array(b_cdata.t), np.array(b_cdata.low), '^')
 
-    czsc_data = sct.tag_ding_di(cdata)
-    line_data = czsc_data[~np.isnan(czsc_data.line)]
-    print(line_data['line'])
-    axes[1].plot(np.array(line_data.t), np.array(line_data.line))
+    # czsc_data = sct.tag_ding_di(cdata)
+    # line_data = czsc_data[~np.isnan(czsc_data.line)]
+    # print(line_data['line'])
+    # axes[1].plot(np.array(line_data.t), np.array(line_data.line))
 
     plt.show()
 
 def main():
-    data = ts.get_hist_data('sz','2014-01-01', ktype='M').sort_index()
+    # data = ts.get_hist_data('sz','2014-01-01', ktype='M').sort_index()
+    data = ts.get_hist_data('sz','1999-01-01','2007-06-01',ktype='M').sort_index()
     draw_czsc(data)
 
 
