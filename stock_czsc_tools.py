@@ -20,12 +20,13 @@ plt.rcParams['font.sans-serif'] = ['Liberation Sans'] # 用来正常显示中文
 plt.rcParams['axes.unicode_minus'] = False # 用来正常显示负号
 
 def baohan_process(data = None):
-    """"""
+    """1、2、3根K线，只2和3有包含关系，包含关系的处理由1和2两K线的升降决定 Class65"""
     if data is None:
         return None
 
     up_down_flag = 'up'
     for i in range(0, len(data)-2):
+        # 当前K线的升降属性由后一根K线组合确定
         if float(data[i:i+1].high) < float(data[i+1:i+2].high) \
         and float(data[i:i+1].low) < float(data[i+1:i+2].low):
             data.ix[i, 'type'] = 'up'
@@ -36,16 +37,17 @@ def baohan_process(data = None):
             up_down_flag = 'down'
         elif float(data[i:i+1].high) >= float(data[i+1:i+2].high) \
         and float(data[i:i+1].low) <= float(data[i+1:i+2].low):
-            data.ix[i+1, 'delete'] = True
+            # 出现包含关系时，保留后一条K线，方便解决合并后但数据未清理时的数据比较
+            data.ix[i, 'delete'] = True
             # default type is UP
             if i == 0:
-                data.ix[i, 'low'] = data.ix[i+1, 'low']
+                data.ix[i+1, 'high'] = data.ix[i, 'high']
             #elif data[i-1: i].type[0] == 'up':
             elif up_down_flag == 'up':
-                data.ix[i, 'low'] = data.ix[i+1, 'low']
+                data.ix[i+1, 'high'] = data.ix[i, 'high']
             #elif data[i-1: i].type[0] == 'down':
             elif up_down_flag == 'down':
-                data.ix[i, 'high'] = data.ix[i+1, 'high']
+                data.ix[i+1, 'low'] = data.ix[i, 'low']
             else:
                 print("Error")
         elif float(data[i:i+1].high) <= float(data[i+1:i+2].high) \
@@ -89,6 +91,14 @@ def find_possible_ding_di(data = None):
             data.ix[i, 'fenxing'] = data.ix[i, 'type']
     return data
 
+
+def clear_false_ding_di(data = None):
+    """处理顶底共K线情况：连续的顶底共边，去掉前一个顶或底肯定没错"""
+    for i in range(0, len(data) - 1):
+        if (data[i: i+1].fenxing[0] == 'ding' or data[i: i+1].fenxing[0] == 'di') \
+        and  (data[i+1: i+2].fenxing[0] == 'ding' or data[i+1: i+2].fenxing[0] == 'di'):
+            data.ix[i, 'fenxing'] = data.ix[i, 'type']
+    return data
 
 def tag_ding_di(data = None):
     """按时间顺序标顶和底"""
