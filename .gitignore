@@ -1,4 +1,5 @@
 __pycache__/*
+*.pyc
 stock_data.hdf5
 stocks.db3
 stocks.sql

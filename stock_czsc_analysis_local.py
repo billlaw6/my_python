@@ -50,34 +50,33 @@ def ding_di_check(data = None):
     if data is None:
         return None
     else:
-        dates = [datetime.datetime(*time.strptime(i, '%Y-%m-%d')[:6]) for i in data.index]
+        dates = [datetime.datetime(*time.strptime(i, '%Y-%m-%d')[:6]) for i in data.date]
         data['t'] = mdates.date2num(dates)
 
-    fig, axes = plt.subplots(2, 1, sharex=True)
+    fig, ax = plt.subplots(2, 1, sharex=True)
     cdata = sct.baohan_process(data)
     # print(cdata)
     c_ddata = zip(np.array(cdata.t), np.array(cdata.open), np.array(cdata.close), np.array(cdata.high), np.array(cdata.low), np.array(cdata.volume))
-    mpf.candlestick_ochl(axes[1], c_ddata, width=0.6, colorup='r', colordown='g')
-    c_ddata = zip(np.array(cdata.t), np.array(cdata.open), np.array(cdata.close), np.array(cdata.high), np.array(cdata.low), np.array(cdata.volume))
-    mpf.candlestick_ochl(axes[0], c_ddata, width=0.6, colorup='r', colordown='g')
-    axes[0].xaxis_date()
-    axes[0].set_title('Before clear')
+    mpf.candlestick_ochl(ax[0], c_ddata, width=0.6, colorup='r', colordown='g')
+    mpf.candlestick_ochl(ax[1], c_ddata, width=0.6, colorup='r', colordown='g')
+    ax[0].xaxis_date()
+    ax[0].set_title('Before clear')
     p_b_cdata = sct.find_possible_ding_di(cdata)
     print(p_b_cdata)
     p_cdata = p_b_cdata[p_b_cdata.fenxing == 'ding']
     b_cdata = p_b_cdata[p_b_cdata.fenxing == 'di']
-    axes[0].plot(np.array(p_cdata.t), np.array(p_cdata.high), 'v')
-    axes[0].plot(np.array(b_cdata.t), np.array(b_cdata.low), '^')
+    ax[0].plot(np.array(p_cdata.t), np.array(p_cdata.high), 'v')
+    ax[0].plot(np.array(b_cdata.t), np.array(b_cdata.low), '^')
 
-    p_b_ddata = sct.clear_false_ding_di(p_b_cdata)
-    axes[1].xaxis_date()
-    axes[1].set_title('After clear')
-    p_b_ddata = sct.find_possible_ding_di(cdata)
-    print(p_b_ddata)
-    p_cdata = p_b_ddata[p_b_ddata.fenxing == 'ding']
-    b_cdata = p_b_ddata[p_b_ddata.fenxing == 'di']
-    axes[1].plot(np.array(p_cdata.t), np.array(p_cdata.high), 'v')
-    axes[1].plot(np.array(b_cdata.t), np.array(b_cdata.low), '^')
+    #p_b_cdata = sct.clear_false_ding_di(p_b_cdata)
+    ax[1].xaxis_date()
+    ax[1].set_title('After clear')
+    p_b_cdata = sct.find_possible_ding_di(cdata)
+    print(p_b_cdata)
+    p_cdata = p_b_cdata[p_b_cdata.fenxing == 'ding']
+    b_cdata = p_b_cdata[p_b_cdata.fenxing == 'di']
+    ax[1].plot(np.array(p_cdata.t), np.array(p_cdata.high), 'v')
+    ax[1].plot(np.array(b_cdata.t), np.array(b_cdata.low), '^')
 
     plt.show()
 
@@ -109,8 +108,8 @@ def draw_czsc(data = None):
 
     p_b_cdata = sct.find_possible_ding_di(cdata)
     print(p_b_cdata)
-    #p_b_cdata = sct.clear_false_ding_di(p_b_cdata)
-    #print(p_b_cdata)
+    p_b_cdata = sct.clear_false_ding_di(p_b_cdata)
+    print(p_b_cdata)
 
     p_cdata = p_b_cdata[p_b_cdata.fenxing == 'ding']
     b_cdata = p_b_cdata[p_b_cdata.fenxing == 'di']
@@ -130,8 +129,8 @@ def main():
     #c_data = pd.read_sql_table('sh_test_data', con)
     #print(c_data.ix[0:15])
     #data_check(c_data)
-    data = ts.get_hist_data('sh', end='2007-06-30', ktype='M').sort_index()
-    #data = pd.read_sql_table('sh_test_data', engine)
+    #data = ts.get_hist_data('sh', end='2007-06-30', ktype='M').sort_index()
+    data = pd.read_sql_table('sh_test_data', engine)
     print(data)
     ding_di_check(data)
     #draw_czsc(data)
