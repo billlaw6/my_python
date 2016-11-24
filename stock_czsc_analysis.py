@@ -58,9 +58,11 @@ def ding_di_check(data = None):
     # print(cdata)
     c_ddata = zip(np.array(cdata.t), np.array(cdata.open), np.array(cdata.close), np.array(cdata.high), np.array(cdata.low), np.array(cdata.volume))
     mpf.candlestick_ochl(axes[1], c_ddata, width=0.6, colorup='r', colordown='g')
+    # 画完以后第二张是白板，重新zip才能画出来，原因不明。
     c_ddata = zip(np.array(cdata.t), np.array(cdata.open), np.array(cdata.close), np.array(cdata.high), np.array(cdata.low), np.array(cdata.volume))
     mpf.candlestick_ochl(axes[0], c_ddata, width=0.6, colorup='r', colordown='g')
     axes[0].xaxis_date()
+    axes[0].autoscale_view()
     axes[0].set_title('Before clear')
     p_b_cdata = sct.find_possible_ding_di(cdata)
     print(p_b_cdata)
@@ -71,8 +73,8 @@ def ding_di_check(data = None):
 
     p_b_ddata = sct.clear_false_ding_di(p_b_cdata)
     axes[1].xaxis_date()
+    axes[1].autoscale_view()
     axes[1].set_title('After clear')
-    p_b_ddata = sct.find_possible_ding_di(cdata)
     print(p_b_ddata)
     p_cdata = p_b_ddata[p_b_ddata.fenxing == 'ding']
     b_cdata = p_b_ddata[p_b_ddata.fenxing == 'di']
@@ -109,8 +111,8 @@ def draw_czsc(data = None):
 
     p_b_cdata = sct.find_possible_ding_di(cdata)
     print(p_b_cdata)
-    #p_b_cdata = sct.clear_false_ding_di(p_b_cdata)
-    #print(p_b_cdata)
+    p_b_cdata = sct.clear_false_ding_di(p_b_cdata)
+    print(p_b_cdata)
 
     p_cdata = p_b_cdata[p_b_cdata.fenxing == 'ding']
     b_cdata = p_b_cdata[p_b_cdata.fenxing == 'di']

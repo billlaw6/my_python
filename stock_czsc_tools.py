@@ -105,48 +105,49 @@ def find_possible_ding_di(data = None):
 
 
 def clear_false_ding_di(data = None):
-    """"""
+    """清理无效的顶底标记"""
+    # 3个顶底相互为边的情况
     for i in range(0, len(data) - 1):
         if data.ix[i, 'fenxing'] == 'ding' and data.ix[i+2, 'fenxing'] == 'ding':
             if data.ix[i, 'high'] > data.ix[i+2, 'high']:
                 data.ix[i+2, 'fenxing'] = data.ix[i+2, 'type']
             else:
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
-        if data.ix[i, 'fenxing'] == 'di' and data.ix[i+2, 'fenxing'] == 'di':
+        elif data.ix[i, 'fenxing'] == 'di' and data.ix[i+2, 'fenxing'] == 'di':
             if data.ix[i, 'low'] < data.ix[i+2, 'low']:
                 data.ix[i+2, 'fenxing'] = data.ix[i+2, 'type']
             else:
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
-    # # lianxu ding di
-    # for i in range(0, len(data) - 1):
-        # if data.ix[i, 'fenxing'] == 'ding' and data.ix[i+1, 'fenxing'] == 'di':
-            # if i == 1:
-                # data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            # elif data.ix[i-2, 'type'] == 'down' and data.ix[i+3, 'type'] =='up':
-                # data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            # elif data.ix[i-2, 'type'] == 'up' and data.ix[i+3, 'type'] =='down':
-                # data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
-            # elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] == 'ding':
-                # data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            # elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] != 'ding':
-                # data.ix[i, 'fenxing'] = data.ix[i, 'type']
-                # data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
-            # else:
-                # print("shen me qing kuang? %s" % data.ix[i])
-        # elif data.ix[i, 'fenxing'] == 'di' and data.ix[i+1, 'fenxing'] == 'ding':
-            # if i == 1:
-                # data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            # elif data.ix[i-2, 'type'] == 'down' and data.ix[i+3, 'type'] =='up':
-                # data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
-            # elif data.ix[i-2, 'type'] == 'up' and data.ix[i+3, 'type'] =='down':
-                # data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            # elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] == 'di':
-                # data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            # elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] != 'di':
-                # data.ix[i, 'fenxing'] = data.ix[i, 'type']
-                # data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
-            # else:
-                # print("shen me qing kuang? %s" % data.ix[i])
+    # 2个顶底相互为边的情况
+    for i in range(0, len(data) - 1):
+        if data.ix[i, 'fenxing'] == 'ding' and data.ix[i+1, 'fenxing'] == 'di':
+            if i == 1:
+                data.ix[i, 'fenxing'] = data.ix[i, 'type']
+            elif data.ix[i-2, 'type'] == 'down' and data.ix[i+3, 'type'] =='up':
+                data.ix[i, 'fenxing'] = data.ix[i, 'type']
+            elif data.ix[i-2, 'type'] == 'up' and data.ix[i+3, 'type'] =='down':
+                data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
+            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] == 'ding':
+                data.ix[i, 'fenxing'] = data.ix[i, 'type']
+            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] != 'ding':
+                data.ix[i, 'fenxing'] = data.ix[i, 'type']
+                data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
+            else:
+                print("shen me qing kuang? %s" % data.ix[i])
+        elif data.ix[i, 'fenxing'] == 'di' and data.ix[i+1, 'fenxing'] == 'ding':
+            if i == 1:
+                data.ix[i, 'fenxing'] = data.ix[i, 'type']
+            elif data.ix[i-2, 'type'] == 'down' and data.ix[i+3, 'type'] =='up':
+                data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
+            elif data.ix[i-2, 'type'] == 'up' and data.ix[i+3, 'type'] =='down':
+                data.ix[i, 'fenxing'] = data.ix[i, 'type']
+            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] == 'di':
+                data.ix[i, 'fenxing'] = data.ix[i, 'type']
+            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] != 'di':
+                data.ix[i, 'fenxing'] = data.ix[i, 'type']
+                data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
+            else:
+                print("shen me qing kuang? %s" % data.ix[i])
     return data
 
 def tag_ding_di(data = None):
