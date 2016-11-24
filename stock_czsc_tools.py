@@ -104,10 +104,9 @@ def find_possible_ding_di(data = None):
     return data
 
 
-def clear_false_ding_di(data = None):
-    """清理无效的顶底标记"""
-    # 3个顶底相互为边的情况
-    for i in range(0, len(data) - 1):
+def clear_3lian_ding_di(data = None):
+    """处理三个连续互为边的顶底，顶底处理第一步"""
+    for i in range(0, len(data) - 2):
         if data.ix[i, 'fenxing'] == 'ding' and data.ix[i+2, 'fenxing'] == 'ding':
             if data.ix[i, 'high'] > data.ix[i+2, 'high']:
                 data.ix[i+2, 'fenxing'] = data.ix[i+2, 'type']
@@ -118,8 +117,11 @@ def clear_false_ding_di(data = None):
                 data.ix[i+2, 'fenxing'] = data.ix[i+2, 'type']
             else:
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
-    # 2个顶底相互为边的情况
-    for i in range(0, len(data) - 1):
+    return data
+
+def clear_2lian_ding_di(data = None):
+    """处理仅两个连续互为边的顶底，顶底处理第二步"""
+    for i in range(0, len(data) - 3):
         if data.ix[i, 'fenxing'] == 'ding' and data.ix[i+1, 'fenxing'] == 'di':
             if i == 1:
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
@@ -129,11 +131,13 @@ def clear_false_ding_di(data = None):
                 data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
             elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] == 'ding':
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] != 'ding':
+            # 下面处理i+3为ding但被3lian处理掉的情况
+            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+4, 'fenxing'] == 'di':
+                data.ix[i, 'fenxing'] = data.ix[i, 'type']
+            else:
+                #print("shen me qing kuang? \n %s" % data.ix[i-2:i+6, ['high','low','type','fenxing']])
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
                 data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
-            else:
-                print("shen me qing kuang? %s" % data.ix[i])
         elif data.ix[i, 'fenxing'] == 'di' and data.ix[i+1, 'fenxing'] == 'ding':
             if i == 1:
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
@@ -143,95 +147,55 @@ def clear_false_ding_di(data = None):
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
             elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] == 'di':
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] != 'di':
+            # 下面处理i+3为di但被3lian处理掉的情况
+            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+4, 'fenxing'] == 'ding':
+                data.ix[i, 'fenxing'] = data.ix[i, 'type']
+            else:
+                #print("shen me qing kuang? \n %s" % data.ix[i-2:i+6, ['high','low','type','fenxing']])
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
                 data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
-            else:
-                print("shen me qing kuang? %s" % data.ix[i])
     return data
 
-def tag_ding_di(data = None):
-    """按时间顺序标顶和底"""
+def clear_continous_ding_di(data = None):
+    """处理连续的顶或连续的底的情况，顶底处理第三步"""
+    for i in range(1, len(data) - 3):
+        if data.ix[i, 'fenxing'].find('di') != -1:
+            for j in range(i+1, len(data) - 3):
+                if (data.ix[j, 'fenxing'].find('di') != -1) and data.ix[i, 'fenxing'] == data.ix[j, 'fenxing']:
+                    if data.ix[j, 'fenxing'] == 'ding':
+                        if data.ix[i, 'high'] < data.ix[j, 'high']:
+                            data.ix[i, 'fenxing'] = data.ix[i, 'type']
+                        else:
+                            data.ix[j, 'fenxing'] = data.ix[j, 'type']
+                    else:
+                        if data.ix[i, 'low'] < data.ix[j, 'low']:
+                            data.ix[j, 'fenxing'] = data.ix[j, 'type']
+                        else:
+                            data.ix[i, 'fenxing'] = data.ix[i, 'type']
+                if (data.ix[j, 'fenxing'].find('di') != -1) and data.ix[i, 'fenxing'] != data.ix[j, 'fenxing']:
+                    break
+                else:
+                    continue 
+    return data
+
+def draw_bi_line(data = None):
+    """给clear_continous_ding_di处理之后的数据画笔"""
     if data is None:
         return None
 
-    # 找到首个可能的顶或底，由此开始找后续的顶或底判断当前顶或底是否成立
-    for i in range(0, len(data) - 1):
-        if data[i: i+1].fenxing[0] == 'ding' or data[i: i+1].fenxing[0] == 'di':
-            current_fenxing = data[i: i+1].fenxing[0]
-            start_index = i
-            print("date: %s, start_index: %s, fenxing: %s" % (data[start_index: start_index+1].index, start_index, data[start_index: start_index+1].fenxing[0]))
-            break
-
-    # 有效间隔数量
-    interval_ding = 0
-    interval_di = 0
-    for i in range(start_index + 1, len(data) - 1):
-        # 根据当前状态找3根K线外的顶或底
-        if current_fenxing == 'ding':
-            if data[i: i+1].fenxing[0] == 'di' and count >= 3:
-                count_b = 0
-                for j in range(i, len(data) - 1):
-                    if data[j: j+1].fenxing[0] == 'ding' and count_b >= 3:
-                        data.loc[data[i:i+1].index[0], 'tag'] = 'di'
-                        data.loc[data[start_index:start_index+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'high']
-                        data.loc[data[i:i+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'low']
-                        current_fenxing = 'di'
-                        count = 0
-                    elif data[j: j+1].fenxing[0] == 'di' and (float(data[j: j+1].low) < float(data[i: i+1].low)):
-                        i = j
-                        break
-                    else:
-                        count_b += 1
-            elif data[i: i+1].fenxing[0] == 'di' and count < 3:
-                count_b = 0
-                current_fenxing = 'ding'
-                break
-            elif data[i: i+1].fenxing[0] == 'di':
-                start_index = i
-                current_fenxing = data[i: i+1].fenxing[0]
-                print("New start ___ date: %s, start_index: %s, fenxing: %s, current_fenxing: %s" % (data[start_index: start_index+1].index, start_index, data[start_index: start_index+1].fenxing[0], current_fenxing))
-                continue
-            elif data[i: i+1].fenxing[0] == 'ding' and (float(data[i: i+1].high) >= float(data[start_index: start_index+1].high)):
-                start_index = i
-                current_fenxing = data[i: i+1].fenxing[0]
-                print("New start ___ date: %s, start_index: %s, fenxing: %s, current_fenxing: %s" % (data[start_index: start_index+1].index, start_index, data[start_index: start_index+1].fenxing[0], current_fenxing))
-                continue
-            else:
-                data.loc[data[i:i+1].index[0], 'tag'] = 'phase'
-                count += 1
-        elif current_fenxing == 'di':
-            if data[i: i+1].fenxing[0] == 'ding' and count < 3:
-                interval_di += 1
-                current_fenxing == 'ding'
-                count_b = 0
-                for j in range(i, len(data) - 1):
-                    if data[j: j+1].fenxing[0] == 'di' and count_b >= 3:
-                        data.loc[data[i:i+1].index[0], 'tag'] = 'ding'
-                        data.loc[data[start_index:start_index+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'low']
-                        data.loc[data[i:i+1].index[0], 'line'] = data.loc[data[i:i+1].index[0], 'high']
-                        current_fenxing = 'ding'
-                        count = 0
-                    elif data[j: j+1].fenxing[0] == 'ding' and (float(data[j: j+1].low) > float(data[i: i+1].low)):
-                        i = j
-                        break
-                    else:
-                        count_b += 1
-            elif data[i: i+1].fenxing[0] == 'ding' and count < 3:
-                count_b = 0
-                current_fenxing = 'ding'
-                break
-            elif data[i: i+1].fenxing[0] == 'di':
-                start_index = i
-                current_fenxing = data[i: i+1].fenxing[0]
-                print("New start ___ date: %s, start_index: %s, fenxing: %s" % (data[start_index: start_index+1].index, start_index, data[start_index: start_index+1].fenxing[0]))
-            elif data[i: i+1].fenxing[0] == 'di' and (float(data[i: i+1].low) >= float(data[start_index: start_index+1].low)):
-                start_index = i
-                current_fenxing = data[i: i+1].fenxing[0]
-                print("New start ___ date: %s, start_index: %s, fenxing: %s" % (data[start_index: start_index+1].index, start_index, data[start_index: start_index+1].fenxing[0]))
-            else:
-                data.loc[data[i:i+1].index[0], 'tag'] = 'phase'
-                count += 1
+    for i in range(1, len(data) - 3):
+        # 在i位置找到首个顶或底，由此开始找后续的顶或底判断当前顶或底是否成立
+        if data.ix[i, 'fenxing'].find('di') != -1:
+            current_fenxing = data[i, 'fenxing']
+            # 从i+1开始找第二个顶底分型，如果满足笔的条件，则继续看后续是否满足笔，满足连续两笔，确定找到正确的开始分型
+            for j in range(i+1, len(data) - 3):
+                if data.ix[j, 'fenxing'].find('di') != -1 and (j - i > 3):
+                    for k in range(j+1, len(data) - 3):
+                        if data.ix[k, 'fenxing'].find('di') != -1 and (k - j > 3):
+                            print("Found start :%s" % data.ix[i])
+                            data.ix[i]
+                        else:
+                            print("第二段不满足")
     return data
 
 

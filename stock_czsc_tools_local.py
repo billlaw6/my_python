@@ -149,7 +149,7 @@ def clear_false_ding_di(data = None):
                 print("shen me qing kuang? %s" % data.ix[i])
     return data
 
-def tag_ding_di(data = None):
+def draw_bi_line(data = None):
     """按时间顺序标顶和底"""
     if data is None:
         return None
