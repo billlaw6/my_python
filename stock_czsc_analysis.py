@@ -71,8 +71,8 @@ def ding_di_check(data = None):
 
     p_b_ddata = sct.clear_3lian_ding_di(p_b_cdata)
     p_b_ddata = sct.clear_2lian_ding_di(p_b_ddata)
-    #print(p_b_ddata['fenxing'])
     p_b_ddata = sct.clear_continous_ding_di(p_b_ddata)
+    p_b_ddata = sct.clear_jin_ding_di(p_b_ddata)
     # 画完以后第二张是白板，重新zip才能画出来，原因不明。
     c_ddata = zip(np.array(cdata.t), np.array(cdata.open), np.array(cdata.close), np.array(cdata.high), np.array(cdata.low), np.array(cdata.volume))
     mpf.candlestick_ochl(axes[0], c_ddata, width=0.6, colorup='r', colordown='g')
@@ -108,7 +108,7 @@ def main():
     #print(c_data.ix[0:15])
     #data_check(c_data)
     #data = ts.get_hist_data('sh', end='2007-06-30', ktype='W').sort_index()
-    data = ts.get_hist_data('sh', '2002-01-01', '2004-01-01', ktype='W').sort_index()
+    data = ts.get_hist_data('sh', '2002-01-01', '2016-01-01', ktype='M').sort_index()
     #data = pd.read_sql_table('sh_test_data', engine)
     #print(data)
     ding_di_check(data)

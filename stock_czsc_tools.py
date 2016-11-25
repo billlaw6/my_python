@@ -178,6 +178,101 @@ def clear_continous_ding_di(data = None):
                     continue 
     return data
 
+def clear_jin_ding_di(data = None):
+    """处理连续的顶或连续的底的情况，顶底处理第三步"""
+    ding_di_list = []
+    for i in range(1, len(data) - 3):
+        if data.ix[i, 'fenxing'].find('di') != -1:
+            ding_di = {}
+            ding_di['loc'] = i
+            ding_di['fenxing'] = data.ix[i, 'fenxing']
+            ding_di['high'] = data.ix[i, 'high']
+            ding_di['low'] = data.ix[i, 'low']
+            ding_di_list.append(ding_di)
+        else:
+            pass
+    # Data check
+    for i in range(0, len(ding_di_list) - 1):
+        if ding_di_list[i]['fenxing'] == ding_di_list[i+1]['fenxing']:
+            print("Error: Lian xu ding di!")
+            exit
+        else:
+            pass
+
+    for i in range(0, len(ding_di_list) - 3):
+        if ding_di_list[i]['fenxing'] == 'ding' and \
+        ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] <= 3 \
+        and ding_di_list[i]['high'] > ding_di_list[i+2]['high'] \
+        and ding_di_list[i+1]['low'] > ding_di_list[i+3]['low']:
+            data.ix[ding_di_list[i+1]['loc'], 'fenxing'] = data.ix[ding_di_list[i+1]['loc'], 'type']
+            data.ix[ding_di_list[i+2]['loc'], 'fenxing'] = data.ix[ding_di_list[i+1]['loc'], 'type']
+        elif ding_di_list[i]['fenxing'] == 'di' and \
+        ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] <= 3 \
+        and ding_di_list[i]['low'] < ding_di_list[i+2]['low'] \
+        and ding_di_list[i+1]['high'] < ding_di_list[i+3]['high']:
+            data.ix[ding_di_list[i+1]['loc'], 'fenxing'] = data.ix[ding_di_list[i+1]['loc'], 'type']
+            data.ix[ding_di_list[i+2]['loc'], 'fenxing'] = data.ix[ding_di_list[i+1]['loc'], 'type']
+            del ding_di_list[i+1]
+            del ding_di_list[i+2]
+        else:
+            pass
+    return data
+
+def find_effective_start(data = None):
+    """Must in firt 4 ding di"""
+    ding_di_list = []
+    for i in range(1, len(data) - 3):
+        if data.ix[i, 'fenxing'].find('di') != -1:
+            ding_di = {}
+            ding_di['loc'] = i
+            ding_di['fenxing'] = data.ix[i, 'fenxing']
+            ding_di['high'] = data.ix[i, 'high']
+            ding_di['low'] = data.ix[i, 'low']
+            ding_di_list.append(ding_di)
+        else:
+            pass
+
+    if len(ding_di_list) <= 2:
+        print("deng zhe!!!")
+    elif len(ding_di_list) == 3:
+        if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
+       and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3:
+            print("Found effective start %s" % data.ix[ding_di_list[0]['loc']])
+        else:
+            print("ji xu deng zhe!!!")
+    elif len(ding_di_list) == 4:
+        effective_start_data_index = 0
+        effective_start_ding_di_index = 0
+        for i in range(0, len(ding_di_list) - 2):
+            if ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
+           and ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] > 3:
+                print("Found effective start %s" % data.ix[ding_di_list[i]['loc']])
+                effective_start_data_index = data.ix[ding_di_list[i]['loc']]
+                effective_start_ding_di_index = i
+                break
+
+        # 
+        if effective_start_data_index > 0:
+            for i in range(effective_start_ding_di_index, len(ding_di_list) - 2):
+                if ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3:
+                    if data.ix[ding_di_list[i]['loc'], 'fenxing'] == 'ding':
+                        data.ix[i, 'bi_line'] == data.ix[i, 'high']
+                        data.ix[i+1, 'bi_line'] == data.ix[i, 'low']
+                    elif data.ix[ding_di_list[i]['loc'], 'fenxing'] == 'di':
+                        data.ix[i, 'bi_line'] == data.ix[i, 'low']
+                        data.ix[i+1, 'bi_line'] == data.ix[i, 'high']
+                    else:
+                        print("Shen ma qing kuang in tag bi line")
+                else:
+                    pass
+
+
+
+
+
+    return data
+
+
 def draw_bi_line(data = None):
     """给clear_continous_ding_di处理之后的数据画笔"""
     if data is None:
