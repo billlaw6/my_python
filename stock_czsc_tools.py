@@ -158,6 +158,9 @@ def clear_2lian_ding_di(data = None):
 
 def clear_continous_ding_di(data = None):
     """处理连续的顶或连续的底的情况，顶底处理第三步"""
+    if len(data) < 4:
+        print("clear_continous_ding_di: data length less than 4")
+        exit
     for i in range(1, len(data) - 3):
         if data.ix[i, 'fenxing'].find('di') != -1:
             for j in range(i+1, len(data) - 3):
@@ -179,7 +182,10 @@ def clear_continous_ding_di(data = None):
     return data
 
 def clear_jin_ding_di(data = None):
-    """处理连续的顶或连续的底的情况，顶底处理第三步"""
+    """处理明确的上升或下降趋势中间隔小于3根K线的顶和底，顶底处理第四步"""
+    if len(data) < 4:
+        print("clear_continous_ding_di: data length less than 4")
+        exit
     ding_di_list = []
     for i in range(1, len(data) - 3):
         if data.ix[i, 'fenxing'].find('di') != -1:
@@ -199,7 +205,8 @@ def clear_jin_ding_di(data = None):
         else:
             pass
 
-    for i in range(0, len(ding_di_list) - 3):
+    for i in range(0, len(ding_di_list) - 4):
+        # print("%s: %s" % (len(ding_di_list), i))
         if ding_di_list[i]['fenxing'] == 'ding' and \
         ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] <= 3 \
         and ding_di_list[i]['high'] > ding_di_list[i+2]['high'] \
@@ -216,10 +223,17 @@ def clear_jin_ding_di(data = None):
             del ding_di_list[i+2]
         else:
             pass
+        # 动态调整结束循环条件，防止索引值超范围
+        if i == len(ding_di_list) - 4:
+            break
     return data
 
-def find_effective_start(data = None):
-    """Must in firt 4 ding di"""
+def find_bi_start(data = None):
+    """在前6个顶底中找出笔的起点，超过6个仍不确认则返回None"""
+    if len(data) < 4:
+        print("clear_continous_ding_di: data length less than 4")
+        exit
+
     ding_di_list = []
     for i in range(1, len(data) - 3):
         if data.ix[i, 'fenxing'].find('di') != -1:
@@ -232,51 +246,122 @@ def find_effective_start(data = None):
         else:
             pass
 
-    if len(ding_di_list) <= 2:
-        print("deng zhe!!!")
-    elif len(ding_di_list) == 3:
+    # Data check
+    for i in range(0, len(ding_di_list) - 1):
+        if ding_di_list[i]['fenxing'] == ding_di_list[i+1]['fenxing']:
+            print("Error: Lian xu ding di!")
+            exit
+        else:
+            pass
+
+    if len(ding_di_list) >= 3:
         if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
        and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3:
-            print("Found effective start %s" % data.ix[ding_di_list[0]['loc']])
+            print("3 > >")
+            return data.ix[ding_di_list[0]['loc']]
         else:
-            print("ji xu deng zhe!!!")
-    elif len(ding_di_list) == 4:
-        effective_start_data_index = 0
-        effective_start_ding_di_index = 0
-        for i in range(0, len(ding_di_list) - 2):
-            if ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
-           and ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] > 3:
-                print("Found effective start %s" % data.ix[ding_di_list[i]['loc']])
-                effective_start_data_index = data.ix[ding_di_list[i]['loc']]
-                effective_start_ding_di_index = i
-                break
+            pass
+    if len(ding_di_list) >= 4:
+        if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] <= 3 \
+        and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3:
+            if ding_di_list[0]['fenxing'] == 'ding' \
+           and ding_di_list[0]['high'] > ding_di_list[2]['high'] \
+           and ding_di_list[1]['low'] > ding_di_list[3]['low']:
+               print("4 < <")
+               return data.ix[ding_di_list[0]['loc']]
+            elif ding_di_list[0]['fenxing'] == 'di' \
+           and ding_di_list[0]['low'] < ding_di_list[2]['low'] \
+           and ding_di_list[1]['high'] < ding_di_list[3]['high']:
+               print("4 < <")
+               return data.ix[ding_di_list[0]['loc']]
+        elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] <= 3 \
+       and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3 \
+       and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] > 3:
+            print("4 < > >")
+            return data.ix[ding_di_list[1]['loc']]
+        elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
+       and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3 \
+       and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] <= 3:
+            print("4 > < <")
+            return data.ix[ding_di_list[0]['loc']]
+        elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
+       and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3 \
+       and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] > 3:
+            if ding_di_list[0]['fenxing'] == 'ding' \
+           and ding_di_list[0]['high'] > ding_di_list[2]['high'] \
+           and ding_di_list[1]['low'] > ding_di_list[3]['low']:
+                print("4 ding > < >")
+                return data.ix[ding_di_list[0]['loc']]
+            elif ding_di_list[0]['fenxing'] == 'di' \
+           and ding_di_list[0]['low'] < ding_di_list[2]['low'] \
+           and ding_di_list[1]['high'] < ding_di_list[3]['high']:
+               print("4 di > < >")
+               return data.ix[ding_di_list[0]['loc']]
+        else:
+            pass
+    if len(ding_di_list) >= 5:
+        if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] <= 3 \
+           and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3 \
+           and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] <= 3:
+            if ding_di_list[0]['fenxing'] == 'ding' \
+           and ding_di_list[4]['high'] > ding_di_list[2]['high']:
+                print("5 ding < > <")
+                return data.ix[ding_di_list[1]['loc']]
+            elif ding_di_list[0]['fenxing'] == 'di' \
+           and ding_di_list[4]['low'] > ding_di_list[2]['low']:
+                print("5 di < > <")
+                return data.ix[ding_di_list[0]['loc']]
+        elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
+           and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3 \
+           and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] > 3:
+            if ding_di_list[0]['fenxing'] == 'ding' \
+           and ding_di_list[0]['high'] > ding_di_list[2]['high'] \
+           and ding_di_list[1]['low'] > ding_di_list[3]['low']:
+                print("5 ding > < >")
+                return data.ix[ding_di_list[0]['loc']]
+            elif ding_di_list[0]['fenxing'] == 'di' \
+           and ding_di_list[0]['low'] < ding_di_list[2]['low'] \
+           and ding_di_list[1]['high'] > ding_di_list[3]['high']:
+                print("5 di > < >")
+                return data.ix[ding_di_list[0]['loc']]
+    if len(ding_di_list) >= 6:
+        if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] <= 3 \
+           and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3 \
+           and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] < 3:
+            if ding_di_list[0]['fenxing'] == 'ding' \
+           and ding_di_list[3]['low'] > ding_di_list[5]['low']:
+                print("6 ding < > <")
+                return data.ix[ding_di_list[1]['loc']]
+            elif ding_di_list[0]['fenxing'] == 'di' \
+           and ding_di_list[3]['high'] < ding_di_list[5]['high']:
+                print("6 di < > <")
+                return data.ix[ding_di_list[1]['loc']]
 
-        # 
-        if effective_start_data_index > 0:
-            for i in range(effective_start_ding_di_index, len(ding_di_list) - 2):
-                if ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3:
-                    if data.ix[ding_di_list[i]['loc'], 'fenxing'] == 'ding':
-                        data.ix[i, 'bi_line'] == data.ix[i, 'high']
-                        data.ix[i+1, 'bi_line'] == data.ix[i, 'low']
-                    elif data.ix[ding_di_list[i]['loc'], 'fenxing'] == 'di':
-                        data.ix[i, 'bi_line'] == data.ix[i, 'low']
-                        data.ix[i+1, 'bi_line'] == data.ix[i, 'high']
-                    else:
-                        print("Shen ma qing kuang in tag bi line")
-                else:
-                    pass
+    print("Found no bi start in qian 6 ding di, shen ma qing kuang?")
+    return None
 
 
-
-
-
-    return data
-
-
-def draw_bi_line(data = None):
-    """给clear_continous_ding_di处理之后的数据画笔"""
+def draw_bi_line(data = None, strict = False):
+    """给标记笔起点之后的数据画笔"""
     if data is None:
         return None
+
+    if len(data) < 4:
+        print("clear_continous_ding_di: data length less than 4")
+        exit
+
+    # 取出所有顶底，方便循环处理
+    ding_di_list = []
+    for i in range(1, len(data) - 3):
+        if data.ix[i, 'fenxing'].find('di') != -1:
+            ding_di = {}
+            ding_di['loc'] = i
+            ding_di['fenxing'] = data.ix[i, 'fenxing']
+            ding_di['high'] = data.ix[i, 'high']
+            ding_di['low'] = data.ix[i, 'low']
+            ding_di_list.append(ding_di)
+        else:
+            pass
 
     for i in range(1, len(data) - 3):
         # 在i位置找到首个顶或底，由此开始找后续的顶或底判断当前顶或底是否成立

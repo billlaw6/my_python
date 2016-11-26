@@ -97,6 +97,10 @@ def ding_di_check(data = None):
     b_cdata = p_b_ddata[p_b_ddata.fenxing == 'di']
     ax.plot(np.array(p_cdata.t), np.array(p_cdata.high), 'v')
     ax.plot(np.array(b_cdata.t), np.array(b_cdata.low), '^')
+    # 标记笔的起点
+    bi_start = sct.find_bi_start(p_b_ddata)
+    if bi_start is not None:
+        plt.annotate("bi start", (bi_start.t, bi_start.high))
 
     plt.show()
 
@@ -108,9 +112,11 @@ def main():
     #print(c_data.ix[0:15])
     #data_check(c_data)
     #data = ts.get_hist_data('sh', end='2007-06-30', ktype='W').sort_index()
-    data = ts.get_hist_data('sh', '2002-01-01', '2016-01-01', ktype='M').sort_index()
+    #data = ts.get_hist_data('sh', '2002-01-01', '2016-01-01', ktype='M').sort_index()
     #data = pd.read_sql_table('sh_test_data', engine)
     #print(data)
+    data = pd.read_csv(u'./sh_M.csv')
+    data = data.set_index('date')
     ding_di_check(data)
     #draw_czsc(data)
 
