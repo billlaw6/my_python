@@ -341,18 +341,17 @@ def find_bi_start(data = None):
     return None
 
 
-def draw_bi_line(data = None, strict = False):
-    """给标记笔起点之后的数据画笔"""
-    if data is None:
+def tag_bi_line(data = None, start_index = None, strict = False):
+    """给标记笔起点之后的数据画笔
+    strict为True时，严格要求顶底之间间隔至少3根K线，为False时允许只有两根K线。
+    69课上证月线图缠少画了前面两个顶底，画线起点"""
+    if data is None or start_index is None:
+        print("No data or no start_index given!")
         return None
 
-    if len(data) < 4:
-        print("clear_continous_ding_di: data length less than 4")
-        exit
-
-    # 取出所有顶底，方便循环处理
+    # 取出笔开始的所有顶底标记，方便循环处理
     ding_di_list = []
-    for i in range(1, len(data) - 3):
+    for i in range(start_index, len(data) - 3):
         if data.ix[i, 'fenxing'].find('di') != -1:
             ding_di = {}
             ding_di['loc'] = i
@@ -363,19 +362,57 @@ def draw_bi_line(data = None, strict = False):
         else:
             pass
 
-    for i in range(1, len(data) - 3):
-        # 在i位置找到首个顶或底，由此开始找后续的顶或底判断当前顶或底是否成立
-        if data.ix[i, 'fenxing'].find('di') != -1:
-            current_fenxing = data[i, 'fenxing']
-            # 从i+1开始找第二个顶底分型，如果满足笔的条件，则继续看后续是否满足笔，满足连续两笔，确定找到正确的开始分型
-            for j in range(i+1, len(data) - 3):
-                if data.ix[j, 'fenxing'].find('di') != -1 and (j - i > 3):
-                    for k in range(j+1, len(data) - 3):
-                        if data.ix[k, 'fenxing'].find('di') != -1 and (k - j > 3):
-                            print("Found start :%s" % data.ix[i])
-                            data.ix[i]
-                        else:
-                            print("第二段不满足")
+    for i in range(0, len(ding_di_list) - 5):
+        # 第二个顶底至第三个顶底够一笔时，第一笔即可确定结束
+        if ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
+        and ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] > 3:
+            if ding_di_list[i]['fenxing'] == 'ding':
+                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'high']
+                data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
+            elif ding_di_list[i]['fenxing'] == 'di':
+                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'low']
+                data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
+            else:
+                print("Error value %s" % ding_di_list[i])
+        # 第三个顶底或第四个顶底有一笔不够条件时，并且第四个顶底有可能作为第一笔终点时，调整第一笔的结束点至第四个顶底
+        elif i >= 1:
+            if (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3 \
+            or ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] <= 3) \
+            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
+                if ding_di_list[i]['fenxing'] == 'ding' \
+                and data.ix[ding_di_list[i]['loc'], 'high'] < data.ix[ding_di_list[i+2]['loc'], 'high']:
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
+                elif ding_di_list[i]['fenxing'] == 'di'\
+                and data.ix[ding_di_list[i]['loc'], 'low'] > data.ix[ding_di_list[i+2]['loc'], 'low']:
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
+                else:
+                    print("Error value %s" % ding_di_list[i])
+        # 第二个顶底至第三个顶底不够一笔，至第四个顶底能确定第一笔结束的情况。
+        elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
+        and ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] < 3:
+            if ding_di_list[i]['fenxing'] == 'ding' \
+            and ding_di_list[i+3]['low'] < ding_di_list[i+1]['low'] \
+            and (ding_di_list[i+4]['loc'] - ding_di_list[i+3]['loc'] > 3 \
+              or ding_di_list[i+5]['low'] > ding_di_list[i+3]['low']):
+                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'high']
+                data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+3]['loc'], 'low']
+            elif ding_di_list[i]['fenxing'] == 'di' \
+            and ding_di_list[i+3]['high'] > ding_di_list[i+1]['high'] \
+            and (ding_di_list[i+4]['loc'] - ding_di_list[i+3]['loc'] > 3 \
+              or ding_di_list[i+5]['high'] < ding_di_list[i+3]['high']):
+                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'low']
+                data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+3]['loc'], 'high']
+            else:
+                print("Error value %s" % ding_di_list[i])
+
+            # i+1 和 i+2不是顶底，画下一笔不以这两顶底
+            del ding_di_list[i+1]
+            del ding_di_list[i+2]
+        # 动态调整结束循环条件，防止索引值超范围
+        if i == len(ding_di_list) - 5:
+            break
     return data
 
 
@@ -463,7 +500,7 @@ def main():
     # pic = price.plot()
     # ax = gca()
     # import math
-    # #data4 = data3.loc[math.isnan(data3['line'])]
+    # #data4 = data3.loc[np.isnan(data3['line'])]
     # data4 = data3.loc[data3['line'] > 0]
     # czsc = data4[['line']]
     # czsc.plot()

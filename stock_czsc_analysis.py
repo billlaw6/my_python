@@ -101,6 +101,15 @@ def ding_di_check(data = None):
     bi_start = sct.find_bi_start(p_b_ddata)
     if bi_start is not None:
         plt.annotate("bi start", (bi_start.t, bi_start.high))
+    for i in range(len(p_b_ddata) - 1):
+        if p_b_ddata.ix[i, 't'] == bi_start.t:
+            sct.tag_bi_line(p_b_ddata, i, strict=True)
+            break
+    print("Found no bi_start!")
+    exit
+    #print(p_b_ddata)
+    bi_data = p_b_ddata[~np.isnan(p_b_ddata.bi_value)]
+    ax.plot(np.array(bi_data.t), np.array(bi_data.bi_value))
 
     plt.show()
 
