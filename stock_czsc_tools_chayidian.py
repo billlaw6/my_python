@@ -367,9 +367,10 @@ def tag_bi_line(data = None, start_index = None, strict = False):
         print("Number of ding_di less than 4, please wait!")
         exit
 
-    for i in range(0, len(ding_di_list) - 3):
-        """走出一个新顶或底就判断一次是否调整笔的结束点"""
-        if ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3:
+    for i in range(0, len(ding_di_list) - 4):
+        # 当前顶底至第二个顶底及第二个顶底至第三个顶底够一笔时，第一笔即可暂定结束
+        if ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
+        and ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] > 3:
             if ding_di_list[i]['fenxing'] == 'ding':
                 data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'high']
                 data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
@@ -378,54 +379,89 @@ def tag_bi_line(data = None, start_index = None, strict = False):
                 data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
             else:
                 print("Error value %s" % ding_di_list[i])
-        elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] < 3) and i == 0:
-            if iding_di_list[i]['fenxing'] == 'ding':
-                if data.ix[ding_di_list[i]['loc'], 'low'] >= data.ix[ding_di_list[i]['loc'], 'low']:
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
-                    del ding_di_list[i+1]
-                    del ding_di_list[i+2]
-            elif ding_di_list[i]['fenxing'] == 'di':
-                if data.ix[ding_di_list[i]['loc'], 'high'] <= data.ix[ding_di_list[i]['loc'], 'high']:
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+3]['loc'], 'high']
-                    del ding_di_list[i+1]
-                    del ding_di_list[i+2]
-            else:
-                print("Error value %s" % ding_di_list[i])
-        elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] < 3) and i > 0:
+        # 当前顶底至第二个顶底及第二个顶底够一笔，但第二个至第三个顶底不够一笔时，根据第四个顶底情况决定是否调整第一笔的结束点
+        elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
+        and ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] <= 3:
             if ding_di_list[i]['fenxing'] == 'ding':
-                if data.ix[ding_di_list[i-1]['loc'], 'low'] >= data.ix[ding_di_list[i+1]['loc'], 'low']:
-                    data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
+                if data.ix[ding_di_list[i+2]['loc'], 'high'] >= data.ix[ding_di_list[i]['loc'], 'high']:
                     data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
                     data.ix[ding_di_list[i]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
-                    del ding_di_list[i+1]
-                    del ding_di_list[i+2]
-                else:
-                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
-                    del ding_di_list[i+1]
-
-            elif ding_di_list[i]['fenxing'] == 'di':
-                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
-                    data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-                else:
-                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = np.nan
                     data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
+                    del ding_di_list[i]
                     del ding_di_list[i+1]
-
+                else:
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
+            elif ding_di_list[i]['fenxing'] == 'di':
+                if data.ix[ding_di_list[i+2]['loc'], 'low'] <= data.ix[ding_di_list[i]['loc'], 'low']:
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
+                    del ding_di_list[i]
+                    del ding_di_list[i+1]
+                else:
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
             else:
-                print("Error value %s" % ding_di_list[i])
+                pass
+        elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3 \
+        and ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] > 3:
+            if ding_di_list[i]['fenxing'] == 'ding':
+                if data.ix[ding_di_list[i]['loc'], 'high'] <= data.ix[ding_di_list[i+2]['loc'], 'high']:
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
+                    del ding_di_list[i]
+                    del ding_di_list[i+1]
+                else:
+                    print("ding xiao da, i+2 di")
+                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+3]['loc'], 'low']
+                    del ding_di_list[i]
+                    del ding_di_list[i+1]
+            elif ding_di_list[i]['fenxing'] == 'di':
+                if data.ix[ding_di_list[i]['loc'], 'low'] >= data.ix[ding_di_list[i+2]['loc'], 'low']:
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
+                    del ding_di_list[i]
+                    del ding_di_list[i+1]
+                else:
+                    print("di xiao da, i+2 gao")
+                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+3]['loc'], 'high']
+                    del ding_di_list[i]
+                    del ding_di_list[i+1]
+            else:
+                pass
+        elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3 \
+        and ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] <= 3:
+            if ding_di_list[i]['fenxing'] == 'ding':
+                if data.ix[ding_di_list[i]['loc'], 'high'] <= data.ix[ding_di_list[i+2]['loc'], 'high']:
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
+                    del ding_di_list[i]
+                    del ding_di_list[i+1]
+                else:
+                    print("ding xiao da, i+2 di")
+                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+3]['loc'], 'low']
+                    del ding_di_list[i]
+                    del ding_di_list[i+1]
+            elif ding_di_list[i]['fenxing'] == 'di':
+                if data.ix[ding_di_list[i]['loc'], 'low'] >= data.ix[ding_di_list[i+2]['loc'], 'low']:
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
+                    del ding_di_list[i]
+                    del ding_di_list[i+1]
+                else:
+                    print("di xiao da, i+2 gao")
+                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+3]['loc'], 'high']
+                    del ding_di_list[i]
+                    del ding_di_list[i+1]
+            else:
+                pass
+        else:
+            pass
 
-        if i >= len(ding_di_list) - 3:
+        if i >= len(ding_di_list) - 4:
             break
     return data
 
