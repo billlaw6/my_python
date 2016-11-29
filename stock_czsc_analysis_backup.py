@@ -367,107 +367,85 @@ def tag_bi_line(data = None, start_index = None, strict = False):
         print("Number of ding_di less than 4, please wait!")
         exit
 
-    if ding_di_list[0]['fenxing'] == 'ding':
-        data.ix[ding_di_list[0]['loc'], 'bi_value'] = data.ix[ding_di_list[0]['loc'], 'high']
-    else:
-        data.ix[ding_di_list[0]['loc'], 'bi_value'] = data.ix[ding_di_list[0]['loc'], 'low']
-
     for i in range(0, len(ding_di_list) - 3):
         """走出一个新顶或底就判断一次是否调整笔的结束点"""
-        # 当前为顶
-        if ding_di_list[i]['fenxing'] == 'ding':
-            # 起点特别处理：笔起点至下一个顶底就不够一笔条件时，直接设定第三个顶底为笔终点
-            if (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i == 0:
-                data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
-                #del ding_di_list[i+1]
-                #del ding_di_list[i+2]
-            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底不够成一笔时
-            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
-            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 如果下一底不能自成一笔但创了新低时，调整前一笔结束点
+        if ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3:
+            if ding_di_list[i]['fenxing'] == 'ding':
+                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'high']
+                data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
+            elif ding_di_list[i]['fenxing'] == 'di':
+                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'low']
+                data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
+            else:
+                print("Error value %s" % ding_di_list[i])
+        elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i == 0:
+            if ding_di_list[i]['fenxing'] == 'ding':
+                if data.ix[ding_di_list[i]['loc'], 'low'] >= data.ix[ding_di_list[i]['loc'], 'low']:
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
+                    del ding_di_list[i+1]
+                    del ding_di_list[i+2]
+            elif ding_di_list[i]['fenxing'] == 'di':
+                if data.ix[ding_di_list[i]['loc'], 'high'] <= data.ix[ding_di_list[i]['loc'], 'high']:
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+3]['loc'], 'high']
+                    del ding_di_list[i+1]
+                    del ding_di_list[i+2]
+            else:
+                print("Error value %s" % ding_di_list[i])
+        # 当前顶底为预标记的可能笔终点，并且至下一顶底不够一笔时
+        elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) \
+        and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])) \
+        and i > 0:
+            if ding_di_list[i]['fenxing'] == 'ding':
                 if data.ix[ding_di_list[i-1]['loc'], 'low'] >= data.ix[ding_di_list[i+1]['loc'], 'low']:
-                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    if not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
                     data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
-                # 如果下一底不能自成一笔且未创新低时，暂不确定
-                elif data.ix[ding_di_list[i-1]['loc'], 'low'] < data.ix[ding_di_list[i+1]['loc'], 'low']:
+                elif data.ix[ding_di_list[i-1]['loc'], 'low'] < data.ix[ding_di_list[i+1]['loc'], 'low'] \
+                and data.ix[ding_di_list[i]['loc'], 'high'] <= data.ix[ding_di_list[i+2]['loc'], 'high']:
+                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+3]['loc'], 'low']
+                    del ding_di_list[i+1]
+                    del ding_di_list[i+2]
+                else:
                     print("Not sertain yet at %s, wait" % ding_di_list[i])
-            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底不够成一笔时
-            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
-            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
-                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
-                    continue
+
+            elif ding_di_list[i]['fenxing'] == 'di':
+                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
+                    data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
+                elif data.ix[ding_di_list[i-1]['loc'], 'high'] > data.ix[ding_di_list[i+1]['loc'], 'high'] \
+                and data.ix[ding_di_list[i]['loc'], 'low'] <= data.ix[ding_di_list[i+2]['loc'], 'low']:
+                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+3]['loc'], 'high']
+                    del ding_di_list[i+1]
+                    del ding_di_list[i+2]
+                else:
+                    print("Not sertain yet at %s, wait" % ding_di_list[i])
+            else:
+                print("Error value %s" % ding_di_list[i])
+        # 当前顶底非预标记的可能笔终点，并且至下一顶底不够一笔时
+        elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) \
+        and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])) \
+        and i > 0:
+            if ding_di_list[i]['fenxing'] == 'ding':
                 if data.ix[ding_di_list[i-1]['loc'], 'low'] >= data.ix[ding_di_list[i+1]['loc'], 'low']:
                     data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
                     data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
                     data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
                     data.ix[ding_di_list[i]['loc'], 'end_change'] = True
                     data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
-                    #del ding_di_list[i+1]
-                    #del ding_di_list[i+2]
+                    del ding_di_list[i+1]
+                    del ding_di_list[i+2]
                 else:
                     data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
-                    #del ding_di_list[i+1]
+                    del ding_di_list[i+1]
 
-            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底够成一笔时
-            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
-            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'high']
-                data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
-
-            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底够成一笔时
-            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
-            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
-                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
-                    continue
-                # 如果下一底创了新低时
-                if data.ix[ding_di_list[i-1]['loc'], 'low'] > data.ix[ding_di_list[i+1]['loc'], 'low']:
-                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
-                # 如果下一底未创新低时，暂不确定
-                elif data.ix[ding_di_list[i-1]['loc'], 'low'] <= data.ix[ding_di_list[i+1]['loc'], 'low']:
-                    print("Not sertain yet at %s, wait" % ding_di_list[i])
-
-        # 当前为底
-        elif ding_di_list[i]['fenxing'] == 'di':
-            # 起点特别处理：笔起点至下一个顶底就不够一笔条件时，直接设定第三个顶底为笔终点
-            if (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i == 0:
-                data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
-                #del ding_di_list[i+1]
-                #del ding_di_list[i+2]
-            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底不够成一笔时
-            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
-            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 如果下一顶创了新高
-                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
-                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    if not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-                # 下一顶未创新高时
-                elif data.ix[ding_di_list[i-1]['loc'], 'high'] > data.ix[ding_di_list[i+1]['loc'], 'high']:
-                    print("Not sertain yet at %s, wait" % ding_di_list[i])
-
-            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底不够成一笔时
-            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
-            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
-                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-                    continue
+            elif ding_di_list[i]['fenxing'] == 'di':
                 if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
                     data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
                     data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
@@ -476,30 +454,9 @@ def tag_bi_line(data = None, start_index = None, strict = False):
                     data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
                 else:
                     data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
-                    #del ding_di_list[i+1]
-
-            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底够成一笔时
-            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 and i > 0 \
-            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'low']
-                data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底够成一笔时
-            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 and i > 0 \
-            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
-                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-                    continue
-                # 如果下一顶创了新高时
-                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
-                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-                # 如果下一顶未创新高时，暂不确定
-                elif data.ix[ding_di_list[i-1]['loc'], 'high'] > data.ix[ding_di_list[i+1]['loc'], 'high']:
-                    print("Not sertain yet at %s, wait" % ding_di_list[i])
-
+                    del ding_di_list[i+1]
+            else:
+                print("Error value %s" % ding_di_list[i])
 
         if i >= len(ding_di_list) - 3:
             break
