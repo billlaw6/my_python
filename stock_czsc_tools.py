@@ -378,8 +378,8 @@ def tag_bi_line(data = None, start_index = None, strict = False):
                 data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
             else:
                 print("Error value %s" % ding_di_list[i])
-        elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] < 3) and i == 0:
-            if iding_di_list[i]['fenxing'] == 'ding':
+        elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i == 0:
+            if ding_di_list[i]['fenxing'] == 'ding':
                 if data.ix[ding_di_list[i]['loc'], 'low'] >= data.ix[ding_di_list[i]['loc'], 'low']:
                     data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = np.nan
                     data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
@@ -393,7 +393,10 @@ def tag_bi_line(data = None, start_index = None, strict = False):
                     del ding_di_list[i+2]
             else:
                 print("Error value %s" % ding_di_list[i])
-        elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] < 3) and i > 0:
+        # bi end
+        elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) \
+        and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])) \
+        and i > 0:
             if ding_di_list[i]['fenxing'] == 'ding':
                 if data.ix[ding_di_list[i-1]['loc'], 'low'] >= data.ix[ding_di_list[i+1]['loc'], 'low']:
                     data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
@@ -404,9 +407,34 @@ def tag_bi_line(data = None, start_index = None, strict = False):
                     del ding_di_list[i+1]
                     del ding_di_list[i+2]
                 else:
+                    print("Not sertain yet at %s, wait" % ding_di_list[i])
+
+            elif ding_di_list[i]['fenxing'] == 'di':
+                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
+                    data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
                     data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
+                    data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
+                else:
+                    print("Not sertain yet at %s, wait" % ding_di_list[i])
+            else:
+                print("Error value %s" % ding_di_list[i])
+        # not bi_end
+        elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) \
+        and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])) \
+        and i > 0:
+            if ding_di_list[i]['fenxing'] == 'ding':
+                if data.ix[ding_di_list[i-1]['loc'], 'low'] >= data.ix[ding_di_list[i+1]['loc'], 'low']:
+                    data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
+                    del ding_di_list[i+1]
+                    del ding_di_list[i+2]
+                else:
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
                     del ding_di_list[i+1]
 
             elif ding_di_list[i]['fenxing'] == 'di':
@@ -417,11 +445,8 @@ def tag_bi_line(data = None, start_index = None, strict = False):
                     data.ix[ding_di_list[i]['loc'], 'end_change'] = True
                     data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
                 else:
-                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
                     del ding_di_list[i+1]
-
             else:
                 print("Error value %s" % ding_di_list[i])
 
