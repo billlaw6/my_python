@@ -84,17 +84,19 @@ def find_possible_ding_di(data = None):
     if data is None:
         return None
 
-    for i in range(1, len(data)-3):
+    for i in range(1, len(data)-1):
         if float(data.ix[i, 'high']) > float(data.ix[i - 1, 'high']) \
         and float(data.ix[i, 'high']) > float(data.ix[i + 1, 'high']) \
         and float(data.ix[i, 'low']) > float(data.ix[i - 1, 'low']) \
         and float(data.ix[i, 'low']) > float(data.ix[i + 1, 'low']):
             data.ix[i, 'fenxing'] = 'ding'
+            i += 1
         elif float(data.ix[i, 'high']) < float(data.ix[i - 1, 'high']) \
         and float(data.ix[i, 'high']) < float(data.ix[i + 1, 'high']) \
         and float(data.ix[i, 'low']) < float(data.ix[i - 1, 'low']) \
         and float(data.ix[i, 'low']) < float(data.ix[i + 1, 'low']):
             data.ix[i, 'fenxing'] = 'di'
+            i += 1
         else:
             data.ix[i, 'fenxing'] = data.ix[i, 'type']
     return data
@@ -254,7 +256,7 @@ def find_bi_start(data = None):
         if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
        and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3:
             print("3 > >")
-            return data.ix[ding_di_list[0]['loc']]
+            return data, data.ix[ding_di_list[0]['loc']]
         else:
             pass
     if len(ding_di_list) >= 4:
@@ -264,22 +266,22 @@ def find_bi_start(data = None):
            and ding_di_list[0]['high'] > ding_di_list[2]['high'] \
            and ding_di_list[1]['low'] > ding_di_list[3]['low']:
                print("4 < <")
-               return data.ix[ding_di_list[0]['loc']]
+               return data, data.ix[ding_di_list[0]['loc']]
             elif ding_di_list[0]['fenxing'] == 'di' \
            and ding_di_list[0]['low'] < ding_di_list[2]['low'] \
            and ding_di_list[1]['high'] < ding_di_list[3]['high']:
                print("4 < <")
-               return data.ix[ding_di_list[0]['loc']]
+               return data, data.ix[ding_di_list[0]['loc']]
         elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] <= 3 \
        and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3 \
        and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] > 3:
             print("4 < > >")
-            return data.ix[ding_di_list[1]['loc']]
+            return data, data.ix[ding_di_list[1]['loc']]
         elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
        and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3 \
        and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] <= 3:
             print("4 > < <")
-            return data.ix[ding_di_list[0]['loc']]
+            return data, data.ix[ding_di_list[0]['loc']]
         elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
        and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3 \
        and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] > 3:
@@ -287,12 +289,12 @@ def find_bi_start(data = None):
            and ding_di_list[0]['high'] > ding_di_list[2]['high'] \
            and ding_di_list[1]['low'] > ding_di_list[3]['low']:
                 print("4 ding > < >")
-                return data.ix[ding_di_list[0]['loc']]
+                return data, data.ix[ding_di_list[0]['loc']]
             elif ding_di_list[0]['fenxing'] == 'di' \
            and ding_di_list[0]['low'] < ding_di_list[2]['low'] \
            and ding_di_list[1]['high'] < ding_di_list[3]['high']:
                print("4 di > < >")
-               return data.ix[ding_di_list[0]['loc']]
+               return data, data.ix[ding_di_list[0]['loc']]
         else:
             pass
     if len(ding_di_list) >= 5:
@@ -302,11 +304,11 @@ def find_bi_start(data = None):
             if ding_di_list[0]['fenxing'] == 'ding' \
            and ding_di_list[4]['high'] > ding_di_list[2]['high']:
                 print("5 ding < > <")
-                return data.ix[ding_di_list[1]['loc']]
+                return data, data.ix[ding_di_list[1]['loc']]
             elif ding_di_list[0]['fenxing'] == 'di' \
            and ding_di_list[4]['low'] > ding_di_list[2]['low']:
                 print("5 di < > <")
-                return data.ix[ding_di_list[0]['loc']]
+                return data, data.ix[ding_di_list[0]['loc']]
         elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
            and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3 \
            and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] > 3:
@@ -314,12 +316,12 @@ def find_bi_start(data = None):
            and ding_di_list[0]['high'] > ding_di_list[2]['high'] \
            and ding_di_list[1]['low'] > ding_di_list[3]['low']:
                 print("5 ding > < >")
-                return data.ix[ding_di_list[0]['loc']]
+                return data, data.ix[ding_di_list[0]['loc']]
             elif ding_di_list[0]['fenxing'] == 'di' \
            and ding_di_list[0]['low'] < ding_di_list[2]['low'] \
            and ding_di_list[1]['high'] > ding_di_list[3]['high']:
                 print("5 di > < >")
-                return data.ix[ding_di_list[0]['loc']]
+                return data, data.ix[ding_di_list[0]['loc']]
     if len(ding_di_list) >= 6:
         if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] <= 3 \
            and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3 \
@@ -327,14 +329,14 @@ def find_bi_start(data = None):
             if ding_di_list[0]['fenxing'] == 'ding' \
            and ding_di_list[3]['low'] > ding_di_list[5]['low']:
                 print("6 ding < > <")
-                return data.ix[ding_di_list[1]['loc']]
+                return data, data.ix[ding_di_list[1]['loc']]
             elif ding_di_list[0]['fenxing'] == 'di' \
            and ding_di_list[3]['high'] < ding_di_list[5]['high']:
                 print("6 di < > <")
-                return data.ix[ding_di_list[1]['loc']]
+                return data, data.ix[ding_di_list[1]['loc']]
 
     print("Found no bi start in qian 6 ding di, shen ma qing kuang?")
-    return None
+    return data, None
 
 
 def tag_bi_line(data = None, start_index = None, strict = False):
@@ -549,7 +551,6 @@ def plot_data(data = None, single=False):
             data = data.set_index('t')
             data[['macd','macdsignal','macdhist']].plot(ax=axes[2])
             axes[2].axhline()
-        plt.show()
     else:
         data['t'] = mdates.date2num(dates)
         adata = data[['t','open','close','high','low','volume']]
@@ -561,14 +562,24 @@ def plot_data(data = None, single=False):
         ax.grid(True)
         ax.xaxis_date()
         ax.autoscale_view()
-        plt.show()
 
+    # 有顶底标记时画顶底标记
+    if 'fenxing' in data.columns:
+        p_data = data[data.fenxing == 'ding']
+        b_data = data[data.fenxing == 'di']
+        ax = plt.gca() 
+        ax.plot(np.array(p_data.t), np.array(p_data.high), 'v')
+        ax.plot(np.array(b_data.t), np.array(b_data.low), '^')
+    plt.show()
 
 def main():
     data = ts.get_hist_data('002047','2016-10-01').sort_index()
-    plot_data(data, single=True)
+    #plot_data(data, single=True)
+    print("Original: %s" % len(data))
     data = baohan_process(data)
+    print("After baohan: %s" % len(data))
     data = find_possible_ding_di(data)
+    print("After find ding di: %s" % len(data))
     plot_data(data, single=True)
 
 
