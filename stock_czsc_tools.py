@@ -25,41 +25,37 @@ def baohan_process(data = None):
         return None
 
     up_down_flag = 'up'
-    for i in range(0, len(data)-2):
+    for i in range(0, len(data)-1):
         # 当前K线的升降属性由后一根K线组合确定
-        if float(data[i:i+1].high) < float(data[i+1:i+2].high) \
-        and float(data[i:i+1].low) < float(data[i+1:i+2].low):
+        if float(data.ix[i, 'high']) < float(data.ix[i+1, 'high']) \
+        and float(data.ix[i, 'low']) < float(data.ix[i+1, 'low']):
             data.ix[i, 'type'] = 'up'
             up_down_flag = 'up'
-        elif float(data[i:i+1].high) > float(data[i+1:i+2].high) \
-        and float(data[i:i+1].low) > float(data[i+1:i+2].low):
+        elif float(data.ix[i, 'high']) > float(data.ix[i+1, 'high']) \
+        and float(data.ix[i, 'low']) > float(data.ix[i+1, 'low']):
             data.ix[i, 'type'] = 'down'
             up_down_flag = 'down'
-        elif float(data[i:i+1].high) >= float(data[i+1:i+2].high) \
-        and float(data[i:i+1].low) <= float(data[i+1:i+2].low):
+        elif float(data.ix[i, 'high']) >= float(data.ix[i+1, 'high']) \
+        and float(data.ix[i, 'low']) <= float(data.ix[i+1, 'low']):
             # 出现包含关系时，保留后一条K线，方便解决合并后但数据未清理时的数据比较
             data.ix[i, 'delete'] = True
             # default type is UP
             if i == 0:
                 data.ix[i+1, 'high'] = data.ix[i, 'high']
-            #elif data[i-1: i].type[0] == 'up':
             elif up_down_flag == 'up':
                 data.ix[i+1, 'high'] = data.ix[i, 'high']
-            #elif data[i-1: i].type[0] == 'down':
             elif up_down_flag == 'down':
                 data.ix[i+1, 'low'] = data.ix[i, 'low']
             else:
                 print("Error")
-        elif float(data[i:i+1].high) <= float(data[i+1:i+2].high) \
-        and float(data[i:i+1].low) >= float(data[i+1:i+2].low):
+        elif float(data.ix[i, 'high']) <= float(data.ix[i+1, 'high']) \
+        and float(data.ix[i, 'low']) >= float(data.ix[i+1, 'low']):
             data.ix[i, 'delete'] = True
             # default type is UP
             if i == 0:
                 data.ix[i+1, 'low'] = data.ix[i, 'low']
-            #elif data[i-1: i].type[0] == 'up':
             elif up_down_flag == 'up':
                 data.ix[i+1, 'low'] = data.ix[i, 'low']
-            #elif data[i-1: i].type[0] == 'down':
             elif up_down_flag == 'down':
                 data.ix[i+1, 'high'] = data.ix[i, 'high']
             else:
@@ -72,9 +68,9 @@ def baohan_process(data = None):
 
     if len(data[data.type == 'delete']) > 0:
         data = baohan_process(data.drop(data[data.delete == True].index))
-    #
+
+    # Again
     for i in range(0, len(data)-2):
-        # 当前K线的升降属性由后一根K线组合确定
         if float(data[i:i+1].high) < float(data[i+1:i+2].high) \
         and float(data[i:i+1].low) < float(data[i+1:i+2].low):
             data.ix[i, 'type'] = 'up'
@@ -455,35 +451,16 @@ def tag_bi_line(data = None, start_index = None, strict = False):
     return data
 
 
-def tech_analysis(data = None):
-    """data为get_hist_data取的结果，并且按日期从旧到新排列"""
+def tag_duan_line(data = None):
+    """Class 67"""
     if data is None:
         return None
-    # 取最大的顶为起始往两边标识有效顶和底
-    start_index = data[0:1].index[0]
-    end_index = data[len(data)-1:len(data)].index[0]
-    start_ding = data.loc[data[data.type=='ding'].groupby('type')['high'].idxmax()].index[0]
-    print("start_ding: %s" % start_ding)
-    data.loc[start_ding, 'tag'] = 'ding'
-    data_a = data[start_index: start_ding].sort_index(ascending=False)
-    data_b = data[start_ding: end_index]
-    #print("data a: %s" % data_a)
-    #print("data b: %s" % data_b)
+    bi_data = data[~np.isnan(data.bi_value)]
+    print(bi_data)
 
-    # 用原来标识删除的tag字段标识有效的顶和底
-    # 首先标识起始点
-    data.loc[start_ding, 'tag'] = 'ding'
-    # 由起始点往两边标识顶和底
-    data_a1 = tag_ding_di(data_a)
-    data_b1 = tag_ding_di(data_b)
-    #print("data a1: %s" % data_a1)
-    #print("data b1: %s" % data_b1)
-    # pd.concat([obj1, obj2], axis=1)
-    data = data_a1.append(data_b1).sort_index().drop_duplicates()
-    #print(data)
     return data
-    
-def draw_data(data = None):
+
+def plot_data(data = None, single=False):
     """自定义画图"""
     if data is None:
         print("Data is None!")
@@ -491,59 +468,57 @@ def draw_data(data = None):
     dates = [datetime.datetime(*time.strptime(i, '%Y-%m-%d')[:6]) for i in data.index]
 
     # 多指标同图
-    data['t'] = mdates.date2num(dates)
-    adata = data[['t','open','close','high','low','volume']]
-    ddata = zip(np.array(adata.t), np.array(adata.open), np.array(adata.close), np.array(adata.high), np.array(adata.low), np.array(adata.volume))
-    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(8,6))
+    if not single:
+        data['t'] = mdates.date2num(dates)
+        adata = data[['t','open','close','high','low','volume']]
+        ddata = zip(np.array(adata.t), np.array(adata.open), np.array(adata.close), np.array(adata.high), np.array(adata.low), np.array(adata.volume))
+        fig, axes = plt.subplots(3, 1, sharex=True, figsize=(8,6))
 
-    mpf.candlestick_ochl(axes[0], ddata, width=0.6, colorup='r', colordown='g')
-    axes[0].set_title(u'宝鹰股份')
-    axes[0].set_ylabel('price')
-    axes[0].grid(True)
-    axes[0].xaxis_date()
-    axes[0].autoscale_view()
-    axes[1].bar(np.array(adata.t), np.array(adata.volume))
-    axes[1].set_ylabel('volume')
-    axes[1].grid(True)
-    axes[1].autoscale_view()
-    plt.setp(plt.gca().get_xticklabels(), rotation=30)
-    # dflen = df.shape[0]
-    dflen = len(data)
-    if dflen > 35:
-        macd, macdsignal, macdhist = ta.MACD(np.array(data['close']),
-                                             fastperiod=12, slowperiod=26,
-                                             signalperiod=9)
-        data['macd']=pd.Series(macd,index=data.index)
-        data['macdsignal']=pd.Series(macdsignal,index=data.index)
-        data['macdhist']=pd.Series(macdhist,index=data.index)
-        data.set_index('t')
-        data = data.set_index('t')
-        data[['macd','macdsignal','macdhist']].plot(ax=axes[2])
-        axes[2].axhline()
-    plt.show()
+        mpf.candlestick_ochl(axes[0], ddata, width=0.6, colorup='r', colordown='g')
+        axes[0].set_title(u'宝鹰股份')
+        axes[0].set_ylabel('price')
+        axes[0].grid(True)
+        axes[0].xaxis_date()
+        axes[0].autoscale_view()
+        axes[1].bar(np.array(adata.t), np.array(adata.volume))
+        axes[1].set_ylabel('volume')
+        axes[1].grid(True)
+        axes[1].autoscale_view()
+        plt.setp(plt.gca().get_xticklabels(), rotation=30)
+        # dflen = df.shape[0]
+        dflen = len(data)
+        if dflen > 35:
+            macd, macdsignal, macdhist = ta.MACD(np.array(data['close']),
+                                                 fastperiod=12, slowperiod=26,
+                                                 signalperiod=9)
+            data['macd']=pd.Series(macd,index=data.index)
+            data['macdsignal']=pd.Series(macdsignal,index=data.index)
+            data['macdhist']=pd.Series(macdhist,index=data.index)
+            data.set_index('t')
+            data = data.set_index('t')
+            data[['macd','macdsignal','macdhist']].plot(ax=axes[2])
+            axes[2].axhline()
+        plt.show()
+    else:
+        data['t'] = mdates.date2num(dates)
+        adata = data[['t','open','close','high','low','volume']]
+        ddata = zip(np.array(adata.t), np.array(adata.open), np.array(adata.close), np.array(adata.high), np.array(adata.low), np.array(adata.volume))
+        fig, ax = plt.subplots(1, 1, figsize=(8,6))
 
+        mpf.candlestick_ochl(ax, ddata, width=0.6, colorup='r', colordown='g')
+        ax.set_ylabel('price')
+        ax.grid(True)
+        ax.xaxis_date()
+        ax.autoscale_view()
+        plt.show()
 
 
 def main():
-    data = ts.get_hist_data('002047','2016-06-01').sort_index()
-    #print(data)
-    draw_data(data)
-    data1 = clear_data(data)
-    print(data1)
-    #data2 = find_possible_ding_di(data1)
-    #print(data2)
-    #draw_data(data)
-    #data3 = tech_analysis(data2)
-    #print(data3)
-    # price = data[['high', 'low']]
-    # pic = price.plot()
-    # ax = gca()
-    # import math
-    # #data4 = data3.loc[np.isnan(data3['line'])]
-    # data4 = data3.loc[data3['line'] > 0]
-    # czsc = data4[['line']]
-    # czsc.plot()
-    # show()
+    data = ts.get_hist_data('002047','2016-10-01').sort_index()
+    plot_data(data, single=True)
+    data = baohan_process(data)
+    data = find_possible_ding_di(data)
+    plot_data(data, single=True)
 
 
 if __name__ == '__main__':

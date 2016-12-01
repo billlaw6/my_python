@@ -124,8 +124,9 @@ def main():
     #data = ts.get_hist_data('sh', '2002-01-01', '2016-01-01', ktype='M').sort_index()
     #data = pd.read_sql_table('sh_test_data', engine)
     #print(data)
-    data = pd.read_csv(u'./sh_M.csv')
-    data = data.set_index('date')
+    #data = pd.read_csv(u'./sh_M.csv')
+    data = ts.get_hist_data('sh', '2016-01-01', ktype='D').sort_index()
+    #data = data.set_index('date')
     ding_di_check(data)
     #draw_czsc(data)
 
