@@ -19,8 +19,13 @@ plt.rcParams['font.family'] = ['sans-serif'] # 用来正常显示中文标签
 plt.rcParams['font.sans-serif'] = ['Liberation Sans'] # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False # 用来正常显示负号
 
-def baohan_process(data = None):
-    """1、2、3根K线，只2和3有包含关系，包含关系的处理由1和2两K线的升降决定 Class65"""
+def find_baohan(data = None):
+    """
+    1、2、3根K线，只2和3有包含关系，包含关系的处理由1和2两K线的升降决定
+    Class65.
+    只查找和标记被包含的K线，用+1-1标识与包含K线的位置关系,解决递归调用结束点判断的困难
+    """
+
     if data is None:
         return None
 
@@ -35,49 +40,58 @@ def baohan_process(data = None):
         and float(data.ix[i, 'low']) > float(data.ix[i+1, 'low']):
             data.ix[i, 'type'] = 'down'
             up_down_flag = 'down'
+
+        # 出现包含关系时
         elif float(data.ix[i, 'high']) >= float(data.ix[i+1, 'high']) \
         and float(data.ix[i, 'low']) <= float(data.ix[i+1, 'low']):
-            # 出现包含关系时，保留后一条K线，方便解决合并后但数据未清理时的数据比较
-            data.ix[i, 'delete'] = True
+            # 标记被包含的K线及与包含K线的位置关系及UP、DOWN
             # default type is UP
             if i == 0:
-                data.ix[i+1, 'high'] = data.ix[i, 'high']
+                data.ix[i+1, 'covered'] = 'UPsub1'
             elif up_down_flag == 'up':
-                data.ix[i+1, 'high'] = data.ix[i, 'high']
+                data.ix[i+1, 'covered'] = 'UPsub1'
             elif up_down_flag == 'down':
-                data.ix[i+1, 'low'] = data.ix[i, 'low']
+                data.ix[i+1, 'covered'] = 'DOWNsub1'
             else:
-                print("Error")
+                print("Up_down_flag error")
         elif float(data.ix[i, 'high']) <= float(data.ix[i+1, 'high']) \
         and float(data.ix[i, 'low']) >= float(data.ix[i+1, 'low']):
-            data.ix[i, 'delete'] = True
+            # 标记被包含的K线及与包含K线的位置关系及UP、DOWN
             # default type is UP
             if i == 0:
-                data.ix[i+1, 'low'] = data.ix[i, 'low']
+                data.ix[i, 'covered'] = 'UPadd1'
             elif up_down_flag == 'up':
-                data.ix[i+1, 'low'] = data.ix[i, 'low']
+                data.ix[i, 'covered'] = 'UPadd1'
             elif up_down_flag == 'down':
-                data.ix[i+1, 'high'] = data.ix[i, 'high']
+                data.ix[i, 'covered'] = 'DOWNadd1'
             else:
-                print("Error")
+                print("Up_down_flag error")
         else:
+            print("Shem Ma K xian guanxi?")
             data.ix[i, 'type'] = 'unknown'
+    return data
 
+def process_baohan(data = None):
+    """
+    Class65.
+    根据UPDOWN标记处理有包含关系的K线
+    """
+    if data is None:
+        return None
 
-    data = data.drop(data[data.delete == True].index)
-
-    if len(data[data.type == 'delete']) > 0:
-        data = baohan_process(data.drop(data[data.delete == True].index))
-
-    # Again
-    for i in range(0, len(data)-2):
-        if float(data[i:i+1].high) < float(data[i+1:i+2].high) \
-        and float(data[i:i+1].low) < float(data[i+1:i+2].low):
-            data.ix[i, 'type'] = 'up'
-        elif float(data[i:i+1].high) > float(data[i+1:i+2].high) \
-        and float(data[i:i+1].low) > float(data[i+1:i+2].low):
-            data.ix[i, 'type'] = 'down'
-    return data.drop(data[data.delete == True].index)
+    for i in range(0, len(data)-1):
+        if data.ix[i, 'covered'] == 'UPsub1':
+            data.ix[i-1, 'low'] = data.ix[i, 'low']
+        elif data.ix[i, 'covered'] == 'UPadd1':
+            data.ix[i+1, 'low'] = data.ix[i, 'low']
+        elif data.ix[i, 'covered'] == 'DOWNsub1':
+            data.ix[i-1, 'high'] = data.ix[i, 'high']
+        elif data.ix[i, 'covered'] == 'DOWNadd1':
+            data.ix[i+1, 'high'] = data.ix[i, 'high']
+        else:
+            print("Shem Ma baohan guanxi?")
+            print(data.ix[i-1:i+1])
+    return data.drop(data[~np.isnan(data.covered)].index)
 
 def find_possible_ding_di(data = None):
     """寻找和标识顶和底，数据类型应该是tushare.get_hist_data获得的dataFrame格式"""
@@ -90,13 +104,13 @@ def find_possible_ding_di(data = None):
         and float(data.ix[i, 'low']) > float(data.ix[i - 1, 'low']) \
         and float(data.ix[i, 'low']) > float(data.ix[i + 1, 'low']):
             data.ix[i, 'fenxing'] = 'ding'
-            i += 1
+            i = i + 1
         elif float(data.ix[i, 'high']) < float(data.ix[i - 1, 'high']) \
         and float(data.ix[i, 'high']) < float(data.ix[i + 1, 'high']) \
         and float(data.ix[i, 'low']) < float(data.ix[i - 1, 'low']) \
         and float(data.ix[i, 'low']) < float(data.ix[i + 1, 'low']):
             data.ix[i, 'fenxing'] = 'di'
-            i += 1
+            i = i + 1
         else:
             data.ix[i, 'fenxing'] = data.ix[i, 'type']
     return data
@@ -104,6 +118,7 @@ def find_possible_ding_di(data = None):
 
 def clear_3lian_ding_di(data = None):
     """处理三个连续互为边的顶底，顶底处理第一步"""
+    # 顶底顶，取高顶；底顶底，取低底。
     for i in range(0, len(data) - 2):
         if data.ix[i, 'fenxing'] == 'ding' and data.ix[i+2, 'fenxing'] == 'ding':
             if data.ix[i, 'high'] > data.ix[i+2, 'high']:
@@ -567,19 +582,28 @@ def plot_data(data = None, single=False):
     if 'fenxing' in data.columns:
         p_data = data[data.fenxing == 'ding']
         b_data = data[data.fenxing == 'di']
-        ax = plt.gca() 
+        ax = plt.gca()
         ax.plot(np.array(p_data.t), np.array(p_data.high), 'v')
         ax.plot(np.array(b_data.t), np.array(b_data.low), '^')
     plt.show()
 
 def main():
-    data = ts.get_hist_data('002047','2016-10-01').sort_index()
-    #plot_data(data, single=True)
+    data = ts.get_hist_data('002047','2016-07-01').sort_index()
+    plot_data(data, single=True)
     print("Original: %s" % len(data))
-    data = baohan_process(data)
+    data = find_baohan(data)
+    covered_data = data[~np.isnan(data.covered)]
+    while len(covered_data) > 0:
+        data = find_baohan(data)
+        data = process_baohan(data)
+        covered_data = data[~np.isnan(data.covered)]
+    data = process_baohan(data)
     print("After baohan: %s" % len(data))
     data = find_possible_ding_di(data)
     print("After find ding di: %s" % len(data))
+    plot_data(data, single=True)
+    data = clear_3lian_ding_di(data)
+    print("After clear 3lian ding di: %s" % len(data))
     plot_data(data, single=True)
 
 

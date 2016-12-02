@@ -69,7 +69,7 @@ def ding_di_check(data = None):
     axes[0].plot(np.array(p_data.t), np.array(p_data.high), 'v')
     axes[0].plot(np.array(b_data.t), np.array(b_data.low), '^')
 
-    #data = sct.clear_3lian_ding_di(p_b_data)
+    data = sct.clear_3lian_ding_di(p_b_data)
     #data = sct.clear_2lian_ding_di(data)
     #data = sct.clear_continous_ding_di(data)
     #data = sct.clear_jin_ding_di(data)
