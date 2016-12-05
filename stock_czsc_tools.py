@@ -19,6 +19,59 @@ plt.rcParams['font.family'] = ['sans-serif'] # 用来正常显示中文标签
 plt.rcParams['font.sans-serif'] = ['Liberation Sans'] # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False # 用来正常显示负号
 
+def baohan_process(data = None):
+    """
+    1、2、3根K线，只2和3有包含关系，包含关系的处理由1和2两K线的升降决定
+    Class65.
+    必须从左至右顺序处理包含关系，单次遍历就行。包含处理只会缩短K线，不会产生新的包含关系。
+    """
+
+    if data is None:
+        return None
+
+    up_down_flag = 'up'
+    for i in range(0, len(data)-1):
+        # 当前K线的升降属性由后一根K线组合确定
+        if float(data.ix[i, 'high']) < float(data.ix[i+1, 'high']) \
+        and float(data.ix[i, 'low']) < float(data.ix[i+1, 'low']):
+            data.ix[i, 'type'] = 'up'
+            up_down_flag = 'up'
+        elif float(data.ix[i, 'high']) > float(data.ix[i+1, 'high']) \
+        and float(data.ix[i, 'low']) > float(data.ix[i+1, 'low']):
+            data.ix[i, 'type'] = 'down'
+            up_down_flag = 'down'
+
+        # 出现包含关系时
+        elif float(data.ix[i, 'high']) >= float(data.ix[i+1, 'high']) \
+        and float(data.ix[i, 'low']) <= float(data.ix[i+1, 'low']):
+            # 标记被包含的K线及与包含K线的位置关系及UP、DOWN
+            # default type is UP
+            data.ix[i+1, 'delete'] = True
+            if i == 0:
+                data.ix[i+1, 'covered'] = 'UPsub1'
+            elif up_down_flag == 'up':
+                data.ix[i+1, 'covered'] = 'UPsub1'
+            elif up_down_flag == 'down':
+                data.ix[i+1, 'covered'] = 'DOWNsub1'
+            else:
+                print("Up_down_flag error")
+        elif float(data.ix[i, 'high']) <= float(data.ix[i+1, 'high']) \
+        and float(data.ix[i, 'low']) >= float(data.ix[i+1, 'low']):
+            # 标记被包含的K线及与包含K线的位置关系及UP、DOWN
+            # default type is UP
+            data.ix[i, 'delete'] = True
+            if i == 0:
+                data.ix[i, 'covered'] = 'UPadd1'
+            elif up_down_flag == 'up':
+                data.ix[i, 'covered'] = 'UPadd1'
+            elif up_down_flag == 'down':
+                data.ix[i, 'covered'] = 'DOWNadd1'
+            else:
+                print("Up_down_flag error")
+        else:
+            print("Shem Ma K xian guanxi?")
+            data.ix[i, 'type'] = 'unknown'
+    return data
 def find_baohan(data = None):
     """
     1、2、3根K线，只2和3有包含关系，包含关系的处理由1和2两K线的升降决定
@@ -592,6 +645,8 @@ def plot_data(data = None, single=False):
 
 def main():
     data = ts.get_hist_data('002047','2016-08-11').sort_index()
+    #data = pd.read_csv(u'./sh_M.csv')
+    #data = data.set_index('date')
     plot_data(data, single=True)
 
     print("Original: %s" % len(data))
