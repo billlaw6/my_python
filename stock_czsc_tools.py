@@ -46,6 +46,7 @@ def find_baohan(data = None):
         and float(data.ix[i, 'low']) <= float(data.ix[i+1, 'low']):
             # 标记被包含的K线及与包含K线的位置关系及UP、DOWN
             # default type is UP
+            data.ix[i+1, 'delete'] = True
             if i == 0:
                 data.ix[i+1, 'covered'] = 'UPsub1'
             elif up_down_flag == 'up':
@@ -58,6 +59,7 @@ def find_baohan(data = None):
         and float(data.ix[i, 'low']) >= float(data.ix[i+1, 'low']):
             # 标记被包含的K线及与包含K线的位置关系及UP、DOWN
             # default type is UP
+            data.ix[i, 'delete'] = True
             if i == 0:
                 data.ix[i, 'covered'] = 'UPadd1'
             elif up_down_flag == 'up':
@@ -80,18 +82,19 @@ def process_baohan(data = None):
         return None
 
     for i in range(0, len(data)-1):
-        if data.ix[i, 'covered'] == 'UPsub1':
-            data.ix[i-1, 'low'] = data.ix[i, 'low']
-        elif data.ix[i, 'covered'] == 'UPadd1':
-            data.ix[i+1, 'low'] = data.ix[i, 'low']
-        elif data.ix[i, 'covered'] == 'DOWNsub1':
-            data.ix[i-1, 'high'] = data.ix[i, 'high']
-        elif data.ix[i, 'covered'] == 'DOWNadd1':
-            data.ix[i+1, 'high'] = data.ix[i, 'high']
-        else:
-            print("Shem Ma baohan guanxi?")
-            print(data.ix[i-1:i+1])
-    return data.drop(data[~np.isnan(data.covered)].index)
+        if data.ix[i, 'delete'] == True:
+            if data.ix[i, 'covered'] == 'UPsub1':
+                data.ix[i-1, 'low'] = data.ix[i, 'low']
+            elif data.ix[i, 'covered'] == 'UPadd1':
+                data.ix[i+1, 'low'] = data.ix[i, 'low']
+            elif data.ix[i, 'covered'] == 'DOWNsub1':
+                data.ix[i-1, 'high'] = data.ix[i, 'high']
+            elif data.ix[i, 'covered'] == 'DOWNadd1':
+                data.ix[i+1, 'high'] = data.ix[i, 'high']
+            else:
+                print("Shem Ma baohan guanxi?")
+                print(data.ix[i-2:i+2])
+    return data.drop(data[data.delete==True].index)
 
 def find_possible_ding_di(data = None):
     """寻找和标识顶和底，数据类型应该是tushare.get_hist_data获得的dataFrame格式"""
@@ -588,20 +591,22 @@ def plot_data(data = None, single=False):
     plt.show()
 
 def main():
-    data = ts.get_hist_data('002047','2016-07-01').sort_index()
+    data = ts.get_hist_data('002047','2016-08-11').sort_index()
     plot_data(data, single=True)
+
     print("Original: %s" % len(data))
     data = find_baohan(data)
-    covered_data = data[~np.isnan(data.covered)]
+    covered_data = data[data.delete == True]
     while len(covered_data) > 0:
         data = find_baohan(data)
         data = process_baohan(data)
-        covered_data = data[~np.isnan(data.covered)]
+        covered_data = data[data.delete == True]
     data = process_baohan(data)
     print("After baohan: %s" % len(data))
     data = find_possible_ding_di(data)
     print("After find ding di: %s" % len(data))
     plot_data(data, single=True)
+
     data = clear_3lian_ding_di(data)
     print("After clear 3lian ding di: %s" % len(data))
     plot_data(data, single=True)
