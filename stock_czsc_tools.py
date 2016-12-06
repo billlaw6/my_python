@@ -32,122 +32,56 @@ def baohan_process(data = None):
     up_down_flag = 'up'
     for i in range(0, len(data)-1):
         # 当前K线的升降属性由后一根K线组合确定
-        if float(data.ix[i, 'high']) < float(data.ix[i+1, 'high']) \
-        and float(data.ix[i, 'low']) < float(data.ix[i+1, 'low']):
+        if data.ix[i, 'high'] < data.ix[i+1, 'high'] \
+        and data.ix[i, 'low'] < data.ix[i+1, 'low']:
             data.ix[i, 'type'] = 'up'
             up_down_flag = 'up'
-        elif float(data.ix[i, 'high']) > float(data.ix[i+1, 'high']) \
-        and float(data.ix[i, 'low']) > float(data.ix[i+1, 'low']):
+        elif data.ix[i, 'high'] > data.ix[i+1, 'high'] \
+        and data.ix[i, 'low'] > data.ix[i+1, 'low']:
             data.ix[i, 'type'] = 'down'
             up_down_flag = 'down'
 
-        # 出现包含关系时
-        elif float(data.ix[i, 'high']) >= float(data.ix[i+1, 'high']) \
-        and float(data.ix[i, 'low']) <= float(data.ix[i+1, 'low']):
+        # 出现前K线包含后K线时，删除后K线，并且继续向后找包含关系
+        elif data.ix[i, 'high'] >= data.ix[i+1, 'high'] \
+        and data.ix[i, 'low'] <= data.ix[i+1, 'low']:
             # 标记被包含的K线及与包含K线的位置关系及UP、DOWN
-            # default type is UP
             data.ix[i+1, 'delete'] = True
             if i == 0:
-                data.ix[i+1, 'covered'] = 'UPsub1'
+                data.ix[i, 'low'] = data.ix[i+1, 'low']
             elif up_down_flag == 'up':
-                data.ix[i+1, 'covered'] = 'UPsub1'
+                data.ix[i, 'low'] = data.ix[i+1, 'low']
             elif up_down_flag == 'down':
-                data.ix[i+1, 'covered'] = 'DOWNsub1'
-            else:
-                print("Up_down_flag error")
-        elif float(data.ix[i, 'high']) <= float(data.ix[i+1, 'high']) \
-        and float(data.ix[i, 'low']) >= float(data.ix[i+1, 'low']):
+                data.ix[i, 'high'] = data.ix[i+1, 'high']
+            # 继续向后分析处理包含关系
+            for j in range(2, len(data) - i):
+                if data.ix[i, 'high'] >= data.ix[i+j, 'high'] \
+                and data.ix[i, 'low'] <= data.ix[i+j, 'low']:
+                    data.ix[i+j, 'delete'] = True
+                    if i == 0:
+                        data.ix[i, 'low'] = data.ix[i+j, 'low']
+                    elif up_down_flag == 'up':
+                        data.ix[i, 'low'] = data.ix[i+j, 'low']
+                    elif up_down_flag == 'down':
+                        data.ix[i, 'high'] = data.ix[i+j, 'high']
+                else:
+                    break
+        # 出现后K线包含前K线时
+        elif data.ix[i, 'high'] <= data.ix[i+1, 'high'] \
+        and data.ix[i, 'low'] >= data.ix[i+1, 'low']:
             # 标记被包含的K线及与包含K线的位置关系及UP、DOWN
             # default type is UP
             data.ix[i, 'delete'] = True
             if i == 0:
-                data.ix[i, 'covered'] = 'UPadd1'
-            elif up_down_flag == 'up':
-                data.ix[i, 'covered'] = 'UPadd1'
-            elif up_down_flag == 'down':
-                data.ix[i, 'covered'] = 'DOWNadd1'
-            else:
-                print("Up_down_flag error")
-        else:
-            print("Shem Ma K xian guanxi?")
-            data.ix[i, 'type'] = 'unknown'
-    return data
-def find_baohan(data = None):
-    """
-    1、2、3根K线，只2和3有包含关系，包含关系的处理由1和2两K线的升降决定
-    Class65.
-    只查找和标记被包含的K线，用+1-1标识与包含K线的位置关系,解决递归调用结束点判断的困难
-    """
-
-    if data is None:
-        return None
-
-    up_down_flag = 'up'
-    for i in range(0, len(data)-1):
-        # 当前K线的升降属性由后一根K线组合确定
-        if float(data.ix[i, 'high']) < float(data.ix[i+1, 'high']) \
-        and float(data.ix[i, 'low']) < float(data.ix[i+1, 'low']):
-            data.ix[i, 'type'] = 'up'
-            up_down_flag = 'up'
-        elif float(data.ix[i, 'high']) > float(data.ix[i+1, 'high']) \
-        and float(data.ix[i, 'low']) > float(data.ix[i+1, 'low']):
-            data.ix[i, 'type'] = 'down'
-            up_down_flag = 'down'
-
-        # 出现包含关系时
-        elif float(data.ix[i, 'high']) >= float(data.ix[i+1, 'high']) \
-        and float(data.ix[i, 'low']) <= float(data.ix[i+1, 'low']):
-            # 标记被包含的K线及与包含K线的位置关系及UP、DOWN
-            # default type is UP
-            data.ix[i+1, 'delete'] = True
-            if i == 0:
-                data.ix[i+1, 'covered'] = 'UPsub1'
-            elif up_down_flag == 'up':
-                data.ix[i+1, 'covered'] = 'UPsub1'
-            elif up_down_flag == 'down':
-                data.ix[i+1, 'covered'] = 'DOWNsub1'
-            else:
-                print("Up_down_flag error")
-        elif float(data.ix[i, 'high']) <= float(data.ix[i+1, 'high']) \
-        and float(data.ix[i, 'low']) >= float(data.ix[i+1, 'low']):
-            # 标记被包含的K线及与包含K线的位置关系及UP、DOWN
-            # default type is UP
-            data.ix[i, 'delete'] = True
-            if i == 0:
-                data.ix[i, 'covered'] = 'UPadd1'
-            elif up_down_flag == 'up':
-                data.ix[i, 'covered'] = 'UPadd1'
-            elif up_down_flag == 'down':
-                data.ix[i, 'covered'] = 'DOWNadd1'
-            else:
-                print("Up_down_flag error")
-        else:
-            print("Shem Ma K xian guanxi?")
-            data.ix[i, 'type'] = 'unknown'
-    return data
-
-def process_baohan(data = None):
-    """
-    Class65.
-    根据UPDOWN标记处理有包含关系的K线
-    """
-    if data is None:
-        return None
-
-    for i in range(0, len(data)-1):
-        if data.ix[i, 'delete'] == True:
-            if data.ix[i, 'covered'] == 'UPsub1':
-                data.ix[i-1, 'low'] = data.ix[i, 'low']
-            elif data.ix[i, 'covered'] == 'UPadd1':
                 data.ix[i+1, 'low'] = data.ix[i, 'low']
-            elif data.ix[i, 'covered'] == 'DOWNsub1':
-                data.ix[i-1, 'high'] = data.ix[i, 'high']
-            elif data.ix[i, 'covered'] == 'DOWNadd1':
-                data.ix[i+1, 'high'] = data.ix[i, 'high']
-            else:
-                print("Shem Ma baohan guanxi?")
-                print(data.ix[i-2:i+2])
+            elif up_down_flag == 'up':
+                data.ix[i+1, 'low'] = data.ix[i, 'low']
+            elif up_down_flag == 'down':
+                data.ix[i+1, 'high'] = data.ix[i, 'low']
+        else:
+            print("Shem Ma K xian guanxi?")
+            data.ix[i, 'type'] = 'unknown'
     return data.drop(data[data.delete==True].index)
+
 
 def find_possible_ding_di(data = None):
     """寻找和标识顶和底，数据类型应该是tushare.get_hist_data获得的dataFrame格式"""
@@ -409,7 +343,6 @@ def find_bi_start(data = None):
     print("Found no bi start in qian 6 ding di, shen ma qing kuang?")
     return data, None
 
-
 def tag_bi_line(data = None, start_index = None, strict = False):
     """给标记笔起点之后的数据画笔
     strict为True时，严格要求顶底之间间隔至少3根K线，为False时允许只有两根K线。
@@ -447,6 +380,177 @@ def tag_bi_line(data = None, start_index = None, strict = False):
         if ding_di_list[i]['fenxing'] == 'ding':
             # 起点特别处理：笔起点至下一个顶底就不够一笔条件时，直接设定第三个顶底为笔终点
             if (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i == 0:
+                data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
+                #del ding_di_list[i+1]
+                #del ding_di_list[i+2]
+            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底不够成一笔时
+            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
+            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
+                # 如果下一底不能自成一笔但创了新低时，调整前一笔结束点
+                if data.ix[ding_di_list[i-1]['loc'], 'low'] >= data.ix[ding_di_list[i+1]['loc'], 'low']:
+                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
+                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
+                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
+                    if not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value']):
+                        data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                        data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
+                # 如果下一底不能自成一笔且未创新低时，暂不确定
+                elif data.ix[ding_di_list[i-1]['loc'], 'low'] < data.ix[ding_di_list[i+1]['loc'], 'low']:
+                    print("Not sertain yet at %s, wait" % ding_di_list[i])
+            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底不够成一笔时
+            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
+            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
+                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
+                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
+                    continue
+                if data.ix[ding_di_list[i-1]['loc'], 'low'] >= data.ix[ding_di_list[i+1]['loc'], 'low']:
+                    data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
+                    #del ding_di_list[i+1]
+                    #del ding_di_list[i+2]
+                else:
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
+                    #del ding_di_list[i+1]
+
+            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底够成一笔时
+            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
+            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
+                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'high']
+                data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
+
+            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底够成一笔时
+            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
+            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
+                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
+                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
+                    continue
+                # 如果下一底创了新低时
+                if data.ix[ding_di_list[i-1]['loc'], 'low'] > data.ix[ding_di_list[i+1]['loc'], 'low']:
+                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
+                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
+                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
+                # 如果下一底未创新低时，暂不确定
+                elif data.ix[ding_di_list[i-1]['loc'], 'low'] <= data.ix[ding_di_list[i+1]['loc'], 'low']:
+                    print("Not sertain yet at %s, wait" % ding_di_list[i])
+
+        # 当前为底
+        elif ding_di_list[i]['fenxing'] == 'di':
+            # 起点特别处理：笔起点至下一个顶底就不够一笔条件时，直接设定第三个顶底为笔终点
+            if (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i == 0:
+                data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
+                #del ding_di_list[i+1]
+                #del ding_di_list[i+2]
+            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底不够成一笔时
+            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
+            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
+                # 如果下一顶创了新高
+                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
+                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
+                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
+                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
+                    if not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value']):
+                        data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                        data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
+                # 下一顶未创新高时
+                elif data.ix[ding_di_list[i-1]['loc'], 'high'] > data.ix[ding_di_list[i+1]['loc'], 'high']:
+                    print("Not sertain yet at %s, wait" % ding_di_list[i])
+
+            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底不够成一笔时
+            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
+            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
+                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
+                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
+                    continue
+                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
+                    data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
+                    data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
+                else:
+                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
+                    #del ding_di_list[i+1]
+
+            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底够成一笔时
+            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 and i > 0 \
+            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
+                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'low']
+                data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
+            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底够成一笔时
+            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 and i > 0 \
+            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
+                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
+                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
+                    continue
+                # 如果下一顶创了新高时
+                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
+                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
+                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
+                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
+                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
+                # 如果下一顶未创新高时，暂不确定
+                elif data.ix[ding_di_list[i-1]['loc'], 'high'] > data.ix[ding_di_list[i+1]['loc'], 'high']:
+                    print("Not sertain yet at %s, wait" % ding_di_list[i])
+
+
+        if i >= len(ding_di_list) - 3:
+            break
+    return data
+
+def tag_bi_line1(data = None):
+    """给标记顶底之后的数据画笔
+    """
+    if data is None or start_index is None:
+        print("No data or no start_index given!")
+        return None
+
+    # 取出笔开始的所有顶底标记，方便循环处理
+    ding_di_list = []
+    for i in range(0, len(data)):
+        if data.ix[i, 'fenxing'].find('di') != -1:
+            ding_di = {}
+            ding_di['loc'] = i
+            ding_di['fenxing'] = data.ix[i, 'fenxing']
+            ding_di['high'] = data.ix[i, 'high']
+            ding_di['low'] = data.ix[i, 'low']
+            ding_di_list.append(ding_di)
+        else:
+            pass
+
+    # 顶底数不够4个时，不标线
+    if len(ding_di_list) < 4:
+        print("Number of ding_di less than 4, please wait!")
+        exit
+
+    possible_ding_start = {}
+    possible_di_start = {}
+    ding_start = {}
+    di_start = {}
+    for i in range(0, len(ding_di_list) - 3):
+        """走出一个新顶或底就判断一次是否调整笔的结束点"""
+        # 当前为顶
+        if ding_di_list[i]['fenxing'] == 'ding':
+            # 往后找可能的di
+            for j in range(1, len(ding_di_list)-i):
+                if ding_di_list[j]['fenxing'] == 'ding' and ding_di_list[i]['high'] < ding_di_list[j]['high']:
+                    i = j
+                    break
+                elif ding_di_list[j]['fenxing'] == 'di' and ding_di_list[j]['loc'] - ding_di_list[i]['loc'] > 3:
+                    pass
+                else:
+                    pass
+
+
                 data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
                 #del ding_di_list[i+1]
                 #del ding_di_list[i+2]
@@ -644,20 +748,14 @@ def plot_data(data = None, single=False):
     plt.show()
 
 def main():
-    data = ts.get_hist_data('002047','2016-08-11').sort_index()
+    data = ts.get_hist_data('002047','2016-01-11').sort_index()
     #data = pd.read_csv(u'./sh_M.csv')
     #data = data.set_index('date')
+    print("Before baohan process: %s" % len(data))
     plot_data(data, single=True)
 
-    print("Original: %s" % len(data))
-    data = find_baohan(data)
-    covered_data = data[data.delete == True]
-    while len(covered_data) > 0:
-        data = find_baohan(data)
-        data = process_baohan(data)
-        covered_data = data[data.delete == True]
-    data = process_baohan(data)
-    print("After baohan: %s" % len(data))
+    data = baohan_process(data)
+    print("After baohan process: %s" % len(data))
     data = find_possible_ding_di(data)
     print("After find ding di: %s" % len(data))
     plot_data(data, single=True)
