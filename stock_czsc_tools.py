@@ -534,15 +534,17 @@ def tag_bi_line1(data = None):
     possible_di_start = {'loc': -1, 'value': 0}
     ding_list = []
     di_list = []
+    # 走出一个新顶或底就判断一次是否调整笔的结束点
     for i in range(0, len(ding_di_list) - 1):
-        # 走出一个新顶或底就判断一次是否调整笔的结束点
+        # 当前为底分型  
         if ding_di_list[i]['fenxing'] == 'di':
             di_list.append(ding_di_list[i]['low'])
-            # 前面没有可能为笔起点的顶
+            # 底 前面没有可能为笔起点的顶分型，暂标记当前底为笔起点
             if possible_ding_start['loc'] < 0 and ding_di_list[i]['low'] == min(di_list):
                 possible_di_start['loc'] = ding_di_list[i]['loc']
                 possible_di_start['value'] = ding_di_list[i]['low']
                 continue
+            # 底 前面有暂标记为笔起点的顶分型，但与当前底分型间隔不够3根K线，前面没有标记为笔起点的底分型时，暂标记当前底为笔起点
             elif possible_ding_start['loc'] >= 0 \
             and ding_di_list[i]['loc'] - possible_ding_start['loc'] <= 3 \
             and possible_di_start['loc'] < 0:
@@ -550,6 +552,7 @@ def tag_bi_line1(data = None):
                 possible_di_start['loc'] = ding_di_list[i]['loc']
                 possible_di_start['value'] = ding_di_list[i]['low']
                 continue
+            # 底 前面有暂标记为笔起点的顶分型，但与之间隔不够3根K线，前面有标记为笔起点的底分型而当前底更低时，将当前底标记为笔起点
             elif possible_ding_start['loc'] >= 0 \
             and ding_di_list[i]['loc'] - possible_ding_start['loc'] <= 3 \
             and possible_di_start['loc'] > 0 \
@@ -559,11 +562,12 @@ def tag_bi_line1(data = None):
                 possible_di_start['value'] = ding_di_list[i]['low']
                 ding_list.clear()
                 continue
-            # 前面有可能为笔起点的顶，并且与之间隔3根K线以上，同时当前K线底小于前面可能顶的顶时
+            # 底 前面有可能为笔起点的顶，并且与之间隔3根K线以上，同时当前K线底小于前面可能顶的顶并且是最低底时
             elif possible_ding_start['loc'] >= 0 \
             and ding_di_list[i]['loc'] - possible_ding_start['loc'] > 3 \
             and ding_di_list[i]['low'] == min(di_list) \
             and data.ix[possible_ding_start['loc'], 'high'] > ding_di_list[i]['low']:
+                # 如果前面有标记为笔起点的底，并且与后面的顶间隔3根K线以上时确认前面的底为确定的笔起点
                 if possible_di_start['loc'] >= 0 \
                 and possible_ding_start['loc'] - possible_di_start['loc'] > 3:
                     # 确定前底为笔节点
@@ -573,13 +577,15 @@ def tag_bi_line1(data = None):
                 possible_di_start['value'] = ding_di_list[i]['low']
                 ding_list.clear()
                 continue
+        # 当前为顶分型  
         elif ding_di_list[i]['fenxing'] == 'ding':
             ding_list.append(ding_di_list[i]['high'])
-            # 前面没有可能为笔起点的底
+            # 顶 前面没有可能为笔起点的底分型，暂标记当前顶为笔起点
             if possible_di_start['loc'] < 0 and ding_di_list[i]['high'] == max(ding_list):
                 possible_ding_start['loc'] = ding_di_list[i]['loc']
                 possible_ding_start['value'] = ding_di_list[i]['high']
                 continue
+            # 顶 前面有暂标记为笔起点的底分型，但与当前顶分型间隔不够3根K线，前面没有标记为笔起点的顶分型时，暂标记当前顶为笔起点
             elif possible_di_start['loc'] > 0 \
             and ding_di_list[i]['loc'] - possible_di_start['loc'] <= 3 \
             and possible_ding_start['loc'] < 0:
@@ -587,6 +593,7 @@ def tag_bi_line1(data = None):
                 possible_ding_start['loc'] = ding_di_list[i]['loc']
                 possible_ding_start['value'] = ding_di_list[i]['high']
                 continue
+            # 顶 前面有暂标记为笔起点的底分型，但与之间隔不够3根K线，前面有标记为笔起点的顶分型而当前顶更高时，将当前顶标记为笔起点
             elif possible_di_start['loc'] > 0 \
             and ding_di_list[i]['loc'] - possible_di_start['loc'] <= 3 \
             and possible_ding_start['loc'] > 0 \
@@ -596,11 +603,12 @@ def tag_bi_line1(data = None):
                 possible_ding_start['value'] = ding_di_list[i]['high']
                 di_list.clear()
                 continue
-            # 前面有可能为笔起点的底，并且与之间隔3根K线以上，同时当前K线顶大于前面可能底的底时
+            # 顶 前面有可能为笔起点的底，并且与之间隔3根K线以上，同时当前K线顶小于前面可能底的底并且是最高顶时
             elif possible_di_start['loc'] >= 0 \
             and ding_di_list[i]['loc'] - possible_di_start['loc'] > 3 \
             and ding_di_list[i]['high'] == max(ding_list) \
             and data.ix[possible_di_start['loc'], 'low'] < ding_di_list[i]['high']:
+                # 如果前面有标记为笔起点的顶，并且与后面的底间隔3根K线以上时确认前面的顶为确定的笔起点
                 if possible_ding_start['loc'] >= 0 \
                 and possible_di_start['loc'] - possible_ding_start['loc'] > 3:
                     # 确定前顶为笔节点
