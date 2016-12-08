@@ -534,8 +534,6 @@ def tag_bi_line1(data = None):
     possible_di_start = {'loc': -1, 'value': 0}
     ding_list = []
     di_list = []
-    ding_start = {'loc': -1, 'value': 0}
-    di_start = {'loc': -1, 'value': 0}
     for i in range(0, len(ding_di_list) - 1):
         # 走出一个新顶或底就判断一次是否调整笔的结束点
         if ding_di_list[i]['fenxing'] == 'di':
@@ -543,44 +541,74 @@ def tag_bi_line1(data = None):
             # 前面没有可能为笔起点的顶
             if possible_ding_start['loc'] < 0 and ding_di_list[i]['low'] == min(di_list):
                 possible_di_start['loc'] = ding_di_list[i]['loc']
+                possible_di_start['value'] = ding_di_list[i]['low']
                 continue
-            elif possible_ding_start['loc'] > 0 \
-            and ding_di_list[i]['loc'] - possible_ding_start['loc'] < 3 \
-            and ding_di_list[i]['low'] == min(di_list):
-                # 标识当前顶底为可能的笔节点
+            elif possible_ding_start['loc'] >= 0 \
+            and ding_di_list[i]['loc'] - possible_ding_start['loc'] <= 3 \
+            and possible_di_start['loc'] < 0:
+                # 标识当前底为可能的笔节点
                 possible_di_start['loc'] = ding_di_list[i]['loc']
+                possible_di_start['value'] = ding_di_list[i]['low']
+                continue
+            elif possible_ding_start['loc'] >= 0 \
+            and ding_di_list[i]['loc'] - possible_ding_start['loc'] <= 3 \
+            and possible_di_start['loc'] > 0 \
+            and ding_di_list[i]['low'] < possible_di_start['value']:
+                # 标识当前底为可能的笔节点
+                possible_di_start['loc'] = ding_di_list[i]['loc']
+                possible_di_start['value'] = ding_di_list[i]['low']
+                ding_list.clear()
+                continue
             # 前面有可能为笔起点的顶，并且与之间隔3根K线以上，同时当前K线底小于前面可能顶的顶时
             elif possible_ding_start['loc'] >= 0 \
             and ding_di_list[i]['loc'] - possible_ding_start['loc'] > 3 \
             and ding_di_list[i]['low'] == min(di_list) \
             and data.ix[possible_ding_start['loc'], 'high'] > ding_di_list[i]['low']:
-                # 确定前顶底为笔节点
-                data.ix[possible_ding_start['loc'], 'bi_value'] = data.ix[possible_ding_start['loc'], 'high']
-                # 标识当前顶底为可能的笔节点
+                if possible_di_start['loc'] >= 0 \
+                and possible_ding_start['loc'] - possible_di_start['loc'] > 3:
+                    # 确定前底为笔节点
+                    data.ix[possible_di_start['loc'], 'bi_value'] = possible_di_start['value']
+                # 标识当前底为可能的笔节点
                 possible_di_start['loc'] = ding_di_list[i]['loc']
-                ding_list.clear
+                possible_di_start['value'] = ding_di_list[i]['low']
+                ding_list.clear()
                 continue
         elif ding_di_list[i]['fenxing'] == 'ding':
             ding_list.append(ding_di_list[i]['high'])
             # 前面没有可能为笔起点的底
             if possible_di_start['loc'] < 0 and ding_di_list[i]['high'] == max(ding_list):
                 possible_ding_start['loc'] = ding_di_list[i]['loc']
+                possible_ding_start['value'] = ding_di_list[i]['high']
                 continue
             elif possible_di_start['loc'] > 0 \
-            and ding_di_list[i]['loc'] - possible_di_start['loc'] < 3 \
-            and ding_di_list[i]['high'] == max(ding_list):
-                # 标识当前顶底为可能的笔节点
+            and ding_di_list[i]['loc'] - possible_di_start['loc'] <= 3 \
+            and possible_ding_start['loc'] < 0:
+                # 标识当前顶为可能的笔节点
                 possible_ding_start['loc'] = ding_di_list[i]['loc']
+                possible_ding_start['value'] = ding_di_list[i]['high']
+                continue
+            elif possible_di_start['loc'] > 0 \
+            and ding_di_list[i]['loc'] - possible_di_start['loc'] <= 3 \
+            and possible_ding_start['loc'] > 0 \
+            and ding_di_list[i]['high'] > possible_ding_start['value']:
+                # 标识当前顶为可能的笔节点
+                possible_ding_start['loc'] = ding_di_list[i]['loc']
+                possible_ding_start['value'] = ding_di_list[i]['high']
+                di_list.clear()
+                continue
             # 前面有可能为笔起点的底，并且与之间隔3根K线以上，同时当前K线顶大于前面可能底的底时
             elif possible_di_start['loc'] >= 0 \
             and ding_di_list[i]['loc'] - possible_di_start['loc'] > 3 \
             and ding_di_list[i]['high'] == max(ding_list) \
             and data.ix[possible_di_start['loc'], 'low'] < ding_di_list[i]['high']:
-                # 确定前顶底为笔节点
-                data.ix[possible_di_start['loc'], 'bi_value'] = data.ix[possible_di_start['loc'], 'low']
-                # 标识当前顶底为可能的笔节点
+                if possible_ding_start['loc'] >= 0 \
+                and possible_di_start['loc'] - possible_ding_start['loc'] > 3:
+                    # 确定前顶为笔节点
+                    data.ix[possible_ding_start['loc'], 'bi_value'] = data.ix[possible_ding_start['loc'], 'high']
+                # 标识当前顶为可能的笔节点
                 possible_ding_start['loc'] = ding_di_list[i]['loc']
-                di_list.clear
+                possible_ding_start['value'] = ding_di_list[i]['high']
+                di_list.clear()
                 continue
     return data
 
@@ -659,11 +687,11 @@ def plot_data(data = None, single=False):
     plt.show()
 
 def main():
-    data = ts.get_hist_data('002047','2016-01-11').sort_index()
-    #data = pd.read_csv(u'./sh_M.csv')
-    #data = data.set_index('date')
+    #data = ts.get_hist_data('002047','2016-01-11').sort_index()
+    data = pd.read_csv(u'./sh_M.csv')
+    data = data.set_index('date')
     print("Before baohan process: %s" % len(data))
-    plot_data(data, single=True)
+    #plot_data(data, single=True)
 
     data = baohan_process(data)
     print("After baohan process: %s" % len(data))
