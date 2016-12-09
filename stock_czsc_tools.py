@@ -82,6 +82,30 @@ def baohan_process(data = None):
             data.ix[i, 'type'] = 'unknown'
     return data.drop(data[data.delete==True].index)
 
+def find_possible_ding_di1(data = None):
+    """寻找和标识顶和底，数据类型应该是tushare.get_hist_data获得的dataFrame格式"""
+    if data is None:
+        return None
+
+    for i in range(2, len(data)-2):
+        if data.ix[i, 'high'] > data.ix[i - 1, 'high'] \
+        and data.ix[i, 'high'] > data.ix[i - 2, 'high'] \
+        and data.ix[i, 'high'] > data.ix[i + 1, 'high'] \
+        and data.ix[i, 'high'] > data.ix[i + 2, 'high'] \
+        and data.ix[i, 'low'] > data.ix[i - 1, 'low'] \
+        and data.ix[i, 'low'] > data.ix[i + 1, 'low']:
+            data.ix[i, 'fenxing'] = 'ding'
+        elif data.ix[i, 'high'] < data.ix[i - 1, 'high'] \
+        and data.ix[i, 'high'] < data.ix[i + 1, 'high'] \
+        and data.ix[i, 'low'] < data.ix[i - 1, 'low'] \
+        and data.ix[i, 'low'] < data.ix[i - 2, 'low'] \
+        and data.ix[i, 'low'] < data.ix[i + 1, 'low'] \
+        and data.ix[i, 'low'] < data.ix[i + 2, 'low']:
+            data.ix[i, 'fenxing'] = 'di'
+        else:
+            data.ix[i, 'fenxing'] = data.ix[i, 'type']
+    return data
+
 
 def find_possible_ding_di(data = None):
     """寻找和标识顶和底，数据类型应该是tushare.get_hist_data获得的dataFrame格式"""
@@ -619,6 +643,136 @@ def tag_bi_line1(data = None):
                 di_list.clear()
                 continue
     return data
+def tag_bi_line2(data = None):
+    """给标记顶底之后的数据画笔
+    """
+    if data is None:
+        return None
+
+    # 取出笔开始的所有顶底标记，方便循环处理
+    ding_di_list = []
+    for i in range(0, len(data)-1):
+        if type(data.ix[i, 'fenxing']) == str:
+            if data.ix[i, 'fenxing'].find('di') != -1:
+                ding_di = {}
+                ding_di['loc'] = i
+                ding_di['fenxing'] = data.ix[i, 'fenxing']
+                ding_di['high'] = data.ix[i, 'high']
+                ding_di['low'] = data.ix[i, 'low']
+                ding_di_list.append(ding_di)
+            else:
+                pass
+
+    # 顶底数不够4个时，不标线
+    if len(ding_di_list) < 4:
+        print("Number of ding_di less than 4, please wait!")
+        exit
+
+    pre_ding_start = {'loc': -1, 'value': 0}
+    pre_di_start = {'loc': -1, 'value': 0}
+    ding_start = {'loc': -1, 'value': 0}
+    di_start = {'loc': -1, 'value': 0}
+    # 走出一个新顶或底就判断一次是否调整笔的结束点
+    for i in range(0, len(ding_di_list) - 1):
+        if ding_di_list[i]['fenxing'] == 'ding':
+            if ding_start['loc'] < 0:
+                pre_ding_start['loc'] = ding_start['loc']
+                pre_ding_start['value'] = ding_start['value']
+                ding_start['loc'] = ding_di_list[i]['loc']
+                ding_start['value'] = ding_di_list[i]['high']
+                continue
+            elif ding_start['loc'] >= 0:
+                if di_start['loc'] < 0:
+                    if ding_di_list[i]['high'] > ding_start['value']:
+                        pre_ding_start['loc'] = ding_start['loc']
+                        pre_ding_start['value'] = ding_start['value']
+                        ding_start['loc'] = ding_di_list[i]['loc']
+                        ding_start['value'] = ding_di_list[i]['high']
+                        continue
+                elif di_start['loc'] >= 0:
+                    if di_start['loc'] < ding_start['loc']:
+                        if ding_di_list[i]['loc'] - di_start['loc'] > 3:
+                            pre_ding_start['loc'] = ding_start['loc']
+                            pre_ding_start['value'] = ding_start['value']
+                            ding_start['loc'] = ding_di_list[i]['loc']
+                            ding_start['value'] = ding_di_list[i]['high']
+                            if pre_ding_start['loc'] > 0 \
+                            and di_start['loc'] - pre_ding_start['loc'] > 3:
+                                data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
+                            continue
+                    elif di_start['loc'] > ding_start['loc']:
+                        if ding_di_list[i]['loc'] - di_start['loc'] > 3:
+                            pre_ding_start['loc'] = ding_start['loc']
+                            pre_ding_start['value'] = ding_start['value']
+                            ding_start['loc'] = ding_di_list[i]['loc']
+                            ding_start['value'] = ding_di_list[i]['high']
+                            if pre_ding_start['loc'] > 0 \
+                            and di_start['loc'] - pre_ding_start['loc'] > 3:
+                                data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
+                            continue
+                        elif ding_di_list[i]['loc'] - di_start['loc'] <= 3:
+                            if ding_di_list[i]['high'] > ding_start['value']:
+                                ding_start['loc'] = ding_di_list[i]['loc']
+                                ding_start['value'] = ding_di_list[i]['high']
+                                di_start['loc'] = pre_di_start['loc']
+                                di_start['value'] = pre_di_start['value']
+                                pre_di_start['loc'] = -1
+                                pre_di_start['value'] = 0
+                                if pre_ding_start['loc'] > 0 \
+                                and di_start['loc'] - pre_ding_start['loc'] > 3:
+                                    data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
+                                continue
+
+
+        elif ding_di_list[i]['fenxing'] == 'di':
+            if di_start['loc'] < 0:
+                pre_di_start['loc'] = di_start['loc']
+                pre_di_start['value'] = di_start['value']
+                di_start['loc'] = ding_di_list[i]['loc']
+                di_start['value'] = ding_di_list[i]['low']
+                continue
+            elif di_start['loc'] >= 0:
+                if ding_start['loc'] < 0:
+                    if ding_di_list[i]['low'] < di_start['loc']:
+                        pre_di_start['loc'] = di_start['loc']
+                        pre_di_start['value'] = di_start['value']
+                        di_start['loc'] = ding_di_list[i]['loc']
+                        di_start['value'] = ding_di_list[i]['low']
+                        continue
+                elif ding_start['loc'] >= 0:
+                    if di_start['loc'] > ding_start['loc']:
+                        if ding_di_list[i]['loc'] - ding_start['loc'] > 3:
+                            pre_di_start['loc'] = di_start['loc']
+                            pre_di_start['value'] = di_start['value']
+                            di_start['loc'] = ding_di_list[i]['loc']
+                            di_start['value'] = ding_di_list[i]['low']
+                            if pre_di_start['loc'] > 0 \
+                            and ding_start['loc'] - pre_di_start['loc'] > 3:
+                                data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
+                            continue
+                    elif di_start['loc'] < ding_start['loc']:
+                        if ding_di_list[i]['loc'] - ding_start['loc'] > 3:
+                            pre_di_start['loc'] = di_start['loc']
+                            pre_di_start['value'] = di_start['value']
+                            di_start['loc'] = ding_di_list[i]['loc']
+                            di_start['value'] = ding_di_list[i]['low']
+                            if pre_di_start['loc'] > 0 \
+                            and ding_start['loc'] - pre_di_start['loc'] > 3:
+                                data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
+                            continue
+                        elif ding_di_list[i]['loc'] - ding_start['loc'] <= 3:
+                            if ding_di_list[i]['low'] < di_start['value']:
+                                di_start['loc'] = ding_di_list[i]['loc']
+                                di_start['value'] = ding_di_list[i]['low']
+                                ding_start['loc'] = pre_ding_start['loc']
+                                ding_start['value'] = pre_ding_start['value']
+                                pre_ding_start['loc'] = -1
+                                pre_ding_start['value'] = 0
+                                if pre_di_start['loc'] > 0 \
+                                and ding_start['loc'] - pre_di_start['loc'] > 3:
+                                    data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
+                                continue
+    return data
 
 
 def tag_duan_line(data = None):
@@ -703,9 +857,9 @@ def main():
 
     data = baohan_process(data)
     print("After baohan process: %s" % len(data))
-    data = find_possible_ding_di(data)
+    data = find_possible_ding_di1(data)
     print("After find ding di: %s" % len(data))
-    data = tag_bi_line1(data)
+    data = tag_bi_line2(data)
     plot_data(data, single=True)
 
     # data = clear_3lian_ding_di(data)
