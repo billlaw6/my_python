@@ -82,7 +82,7 @@ def baohan_process(data = None):
             data.ix[i, 'type'] = 'unknown'
     return data.drop(data[data.delete==True].index)
 
-def find_possible_ding_di1(data = None):
+def find_possible_ding_di(data = None):
     """寻找和标识顶和底，数据类型应该是tushare.get_hist_data获得的dataFrame格式"""
     if data is None:
         return None
@@ -107,429 +107,7 @@ def find_possible_ding_di1(data = None):
     return data
 
 
-def find_possible_ding_di(data = None):
-    """寻找和标识顶和底，数据类型应该是tushare.get_hist_data获得的dataFrame格式"""
-    if data is None:
-        return None
-
-    for i in range(1, len(data)-1):
-        if float(data.ix[i, 'high']) > float(data.ix[i - 1, 'high']) \
-        and float(data.ix[i, 'high']) > float(data.ix[i + 1, 'high']) \
-        and float(data.ix[i, 'low']) > float(data.ix[i - 1, 'low']) \
-        and float(data.ix[i, 'low']) > float(data.ix[i + 1, 'low']):
-            data.ix[i, 'fenxing'] = 'ding'
-        elif float(data.ix[i, 'high']) < float(data.ix[i - 1, 'high']) \
-        and float(data.ix[i, 'high']) < float(data.ix[i + 1, 'high']) \
-        and float(data.ix[i, 'low']) < float(data.ix[i - 1, 'low']) \
-        and float(data.ix[i, 'low']) < float(data.ix[i + 1, 'low']):
-            data.ix[i, 'fenxing'] = 'di'
-        else:
-            data.ix[i, 'fenxing'] = data.ix[i, 'type']
-    return data
-
-
-def clear_3lian_ding_di(data = None):
-    """处理三个连续互为边的顶底，顶底处理第一步"""
-    # 顶底顶，取高顶；底顶底，取低底。
-    for i in range(0, len(data) - 2):
-        if data.ix[i, 'fenxing'] == 'ding' and data.ix[i+2, 'fenxing'] == 'ding':
-            if data.ix[i, 'high'] > data.ix[i+2, 'high']:
-                data.ix[i+2, 'fenxing'] = data.ix[i+2, 'type']
-            else:
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-        elif data.ix[i, 'fenxing'] == 'di' and data.ix[i+2, 'fenxing'] == 'di':
-            if data.ix[i, 'low'] < data.ix[i+2, 'low']:
-                data.ix[i+2, 'fenxing'] = data.ix[i+2, 'type']
-            else:
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-    return data
-
-def clear_2lian_ding_di(data = None):
-    """处理仅两个连续互为边的顶底，顶底处理第二步"""
-    for i in range(0, len(data) - 3):
-        if data.ix[i, 'fenxing'] == 'ding' and data.ix[i+1, 'fenxing'] == 'di':
-            if i == 1:
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            elif data.ix[i-2, 'type'] == 'down' and data.ix[i+3, 'type'] =='up':
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            elif data.ix[i-2, 'type'] == 'up' and data.ix[i+3, 'type'] =='down':
-                data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
-            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] == 'ding':
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            # 下面处理i+3为ding但被3lian处理掉的情况
-            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+4, 'fenxing'] == 'di':
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            else:
-                #print("shen me qing kuang? \n %s" % data.ix[i-2:i+6, ['high','low','type','fenxing']])
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-                data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
-        elif data.ix[i, 'fenxing'] == 'di' and data.ix[i+1, 'fenxing'] == 'ding':
-            if i == 1:
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            elif data.ix[i-2, 'type'] == 'down' and data.ix[i+3, 'type'] =='up':
-                data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
-            elif data.ix[i-2, 'type'] == 'up' and data.ix[i+3, 'type'] =='down':
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+3, 'fenxing'] == 'di':
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            # 下面处理i+3为di但被3lian处理掉的情况
-            elif data.ix[i-2, 'type'] == data.ix[i+3, 'type'] and data.ix[i+4, 'fenxing'] == 'ding':
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-            else:
-                #print("shen me qing kuang? \n %s" % data.ix[i-2:i+6, ['high','low','type','fenxing']])
-                data.ix[i, 'fenxing'] = data.ix[i, 'type']
-                data.ix[i+1, 'fenxing'] = data.ix[i, 'type']
-    return data
-
-def clear_continous_ding_di(data = None):
-    """处理连续的顶或连续的底的情况，顶底处理第三步"""
-    if len(data) < 4:
-        print("clear_continous_ding_di: data length less than 4")
-        exit
-    for i in range(1, len(data) - 3):
-        if data.ix[i, 'fenxing'].find('di') != -1:
-            for j in range(i+1, len(data) - 3):
-                if (data.ix[j, 'fenxing'].find('di') != -1) and data.ix[i, 'fenxing'] == data.ix[j, 'fenxing']:
-                    if data.ix[j, 'fenxing'] == 'ding':
-                        if data.ix[i, 'high'] < data.ix[j, 'high']:
-                            data.ix[i, 'fenxing'] = data.ix[i, 'type']
-                        else:
-                            data.ix[j, 'fenxing'] = data.ix[j, 'type']
-                    else:
-                        if data.ix[i, 'low'] < data.ix[j, 'low']:
-                            data.ix[j, 'fenxing'] = data.ix[j, 'type']
-                        else:
-                            data.ix[i, 'fenxing'] = data.ix[i, 'type']
-                if (data.ix[j, 'fenxing'].find('di') != -1) and data.ix[i, 'fenxing'] != data.ix[j, 'fenxing']:
-                    break
-                else:
-                    continue 
-    return data
-
-def clear_jin_ding_di(data = None):
-    """处理明确的上升或下降趋势中间隔小于3根K线的顶和底，顶底处理第四步"""
-    if len(data) < 4:
-        print("clear_continous_ding_di: data length less than 4")
-        exit
-    ding_di_list = []
-    for i in range(1, len(data) - 3):
-        if data.ix[i, 'fenxing'].find('di') != -1:
-            ding_di = {}
-            ding_di['loc'] = i
-            ding_di['fenxing'] = data.ix[i, 'fenxing']
-            ding_di['high'] = data.ix[i, 'high']
-            ding_di['low'] = data.ix[i, 'low']
-            ding_di_list.append(ding_di)
-        else:
-            pass
-    # Data check
-    for i in range(0, len(ding_di_list) - 1):
-        if ding_di_list[i]['fenxing'] == ding_di_list[i+1]['fenxing']:
-            print("Error: Lian xu ding di!")
-            exit
-        else:
-            pass
-
-    for i in range(0, len(ding_di_list) - 4):
-        # print("%s: %s" % (len(ding_di_list), i))
-        if ding_di_list[i]['fenxing'] == 'ding' and \
-        ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] <= 3 \
-        and ding_di_list[i]['high'] > ding_di_list[i+2]['high'] \
-        and ding_di_list[i+1]['low'] > ding_di_list[i+3]['low']:
-            data.ix[ding_di_list[i+1]['loc'], 'fenxing'] = data.ix[ding_di_list[i+1]['loc'], 'type']
-            data.ix[ding_di_list[i+2]['loc'], 'fenxing'] = data.ix[ding_di_list[i+1]['loc'], 'type']
-        elif ding_di_list[i]['fenxing'] == 'di' and \
-        ding_di_list[i+2]['loc'] - ding_di_list[i+1]['loc'] <= 3 \
-        and ding_di_list[i]['low'] < ding_di_list[i+2]['low'] \
-        and ding_di_list[i+1]['high'] < ding_di_list[i+3]['high']:
-            data.ix[ding_di_list[i+1]['loc'], 'fenxing'] = data.ix[ding_di_list[i+1]['loc'], 'type']
-            data.ix[ding_di_list[i+2]['loc'], 'fenxing'] = data.ix[ding_di_list[i+1]['loc'], 'type']
-            del ding_di_list[i+1]
-            del ding_di_list[i+2]
-        else:
-            pass
-        # 动态调整结束循环条件，防止索引值超范围
-        if i == len(ding_di_list) - 4:
-            break
-    return data
-
-def find_bi_start(data = None):
-    """在前6个顶底中找出笔的起点，超过6个仍不确认则返回None"""
-    if len(data) < 4:
-        print("clear_continous_ding_di: data length less than 4")
-        exit
-
-    ding_di_list = []
-    for i in range(1, len(data) - 3):
-        if data.ix[i, 'fenxing'].find('di') != -1:
-            ding_di = {}
-            ding_di['loc'] = i
-            ding_di['fenxing'] = data.ix[i, 'fenxing']
-            ding_di['high'] = data.ix[i, 'high']
-            ding_di['low'] = data.ix[i, 'low']
-            ding_di_list.append(ding_di)
-        else:
-            pass
-
-    # Data check
-    for i in range(0, len(ding_di_list) - 1):
-        if ding_di_list[i]['fenxing'] == ding_di_list[i+1]['fenxing']:
-            print("Error: Lian xu ding di!")
-            exit
-        else:
-            pass
-
-    if len(ding_di_list) >= 3:
-        if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
-       and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3:
-            print("3 > >")
-            return data, data.ix[ding_di_list[0]['loc']]
-        else:
-            pass
-    if len(ding_di_list) >= 4:
-        if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] <= 3 \
-        and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3:
-            if ding_di_list[0]['fenxing'] == 'ding' \
-           and ding_di_list[0]['high'] > ding_di_list[2]['high'] \
-           and ding_di_list[1]['low'] > ding_di_list[3]['low']:
-               print("4 < <")
-               return data, data.ix[ding_di_list[0]['loc']]
-            elif ding_di_list[0]['fenxing'] == 'di' \
-           and ding_di_list[0]['low'] < ding_di_list[2]['low'] \
-           and ding_di_list[1]['high'] < ding_di_list[3]['high']:
-               print("4 < <")
-               return data, data.ix[ding_di_list[0]['loc']]
-        elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] <= 3 \
-       and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3 \
-       and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] > 3:
-            print("4 < > >")
-            return data, data.ix[ding_di_list[1]['loc']]
-        elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
-       and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3 \
-       and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] <= 3:
-            print("4 > < <")
-            return data, data.ix[ding_di_list[0]['loc']]
-        elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
-       and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3 \
-       and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] > 3:
-            if ding_di_list[0]['fenxing'] == 'ding' \
-           and ding_di_list[0]['high'] > ding_di_list[2]['high'] \
-           and ding_di_list[1]['low'] > ding_di_list[3]['low']:
-                print("4 ding > < >")
-                return data, data.ix[ding_di_list[0]['loc']]
-            elif ding_di_list[0]['fenxing'] == 'di' \
-           and ding_di_list[0]['low'] < ding_di_list[2]['low'] \
-           and ding_di_list[1]['high'] < ding_di_list[3]['high']:
-               print("4 di > < >")
-               return data, data.ix[ding_di_list[0]['loc']]
-        else:
-            pass
-    if len(ding_di_list) >= 5:
-        if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] <= 3 \
-           and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3 \
-           and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] <= 3:
-            if ding_di_list[0]['fenxing'] == 'ding' \
-           and ding_di_list[4]['high'] > ding_di_list[2]['high']:
-                print("5 ding < > <")
-                return data, data.ix[ding_di_list[1]['loc']]
-            elif ding_di_list[0]['fenxing'] == 'di' \
-           and ding_di_list[4]['low'] > ding_di_list[2]['low']:
-                print("5 di < > <")
-                return data, data.ix[ding_di_list[0]['loc']]
-        elif ding_di_list[1]['loc'] - ding_di_list[0]['loc'] > 3 \
-           and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] <= 3 \
-           and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] > 3:
-            if ding_di_list[0]['fenxing'] == 'ding' \
-           and ding_di_list[0]['high'] > ding_di_list[2]['high'] \
-           and ding_di_list[1]['low'] > ding_di_list[3]['low']:
-                print("5 ding > < >")
-                return data, data.ix[ding_di_list[0]['loc']]
-            elif ding_di_list[0]['fenxing'] == 'di' \
-           and ding_di_list[0]['low'] < ding_di_list[2]['low'] \
-           and ding_di_list[1]['high'] > ding_di_list[3]['high']:
-                print("5 di > < >")
-                return data, data.ix[ding_di_list[0]['loc']]
-    if len(ding_di_list) >= 6:
-        if ding_di_list[1]['loc'] - ding_di_list[0]['loc'] <= 3 \
-           and ding_di_list[2]['loc'] - ding_di_list[1]['loc'] > 3 \
-           and ding_di_list[3]['loc'] - ding_di_list[2]['loc'] < 3:
-            if ding_di_list[0]['fenxing'] == 'ding' \
-           and ding_di_list[3]['low'] > ding_di_list[5]['low']:
-                print("6 ding < > <")
-                return data, data.ix[ding_di_list[1]['loc']]
-            elif ding_di_list[0]['fenxing'] == 'di' \
-           and ding_di_list[3]['high'] < ding_di_list[5]['high']:
-                print("6 di < > <")
-                return data, data.ix[ding_di_list[1]['loc']]
-
-    print("Found no bi start in qian 6 ding di, shen ma qing kuang?")
-    return data, None
-
-def tag_bi_line(data = None, start_index = None, strict = False):
-    """给标记笔起点之后的数据画笔
-    strict为True时，严格要求顶底之间间隔至少3根K线，为False时允许只有两根K线。
-    69课上证月线图缠少画了前面两个顶底，画线起点"""
-    if data is None or start_index is None:
-        print("No data or no start_index given!")
-        return None
-
-    # 取出笔开始的所有顶底标记，方便循环处理
-    ding_di_list = []
-    for i in range(start_index, len(data) - 3):
-        if data.ix[i, 'fenxing'].find('di') != -1:
-            ding_di = {}
-            ding_di['loc'] = i
-            ding_di['fenxing'] = data.ix[i, 'fenxing']
-            ding_di['high'] = data.ix[i, 'high']
-            ding_di['low'] = data.ix[i, 'low']
-            ding_di_list.append(ding_di)
-        else:
-            pass
-
-    # 顶底数不够4个时，不标线
-    if len(ding_di_list) < 4:
-        print("Number of ding_di less than 4, please wait!")
-        exit
-
-    if ding_di_list[0]['fenxing'] == 'ding':
-        data.ix[ding_di_list[0]['loc'], 'bi_value'] = data.ix[ding_di_list[0]['loc'], 'high']
-    else:
-        data.ix[ding_di_list[0]['loc'], 'bi_value'] = data.ix[ding_di_list[0]['loc'], 'low']
-
-    for i in range(0, len(ding_di_list) - 3):
-        """走出一个新顶或底就判断一次是否调整笔的结束点"""
-        # 当前为顶
-        if ding_di_list[i]['fenxing'] == 'ding':
-            # 起点特别处理：笔起点至下一个顶底就不够一笔条件时，直接设定第三个顶底为笔终点
-            if (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i == 0:
-                data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
-                #del ding_di_list[i+1]
-                #del ding_di_list[i+2]
-            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底不够成一笔时
-            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
-            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 如果下一底不能自成一笔但创了新低时，调整前一笔结束点
-                if data.ix[ding_di_list[i-1]['loc'], 'low'] >= data.ix[ding_di_list[i+1]['loc'], 'low']:
-                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    if not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
-                # 如果下一底不能自成一笔且未创新低时，暂不确定
-                elif data.ix[ding_di_list[i-1]['loc'], 'low'] < data.ix[ding_di_list[i+1]['loc'], 'low']:
-                    print("Not sertain yet at %s, wait" % ding_di_list[i])
-            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底不够成一笔时
-            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
-            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
-                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
-                    continue
-                if data.ix[ding_di_list[i-1]['loc'], 'low'] >= data.ix[ding_di_list[i+1]['loc'], 'low']:
-                    data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
-                    #del ding_di_list[i+1]
-                    #del ding_di_list[i+2]
-                else:
-                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
-                    #del ding_di_list[i+1]
-
-            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底够成一笔时
-            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
-            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'high']
-                data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
-
-            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底够成一笔时
-            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 \
-            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
-                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
-                    continue
-                # 如果下一底创了新低时
-                if data.ix[ding_di_list[i-1]['loc'], 'low'] > data.ix[ding_di_list[i+1]['loc'], 'low']:
-                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'low']
-                # 如果下一底未创新低时，暂不确定
-                elif data.ix[ding_di_list[i-1]['loc'], 'low'] <= data.ix[ding_di_list[i+1]['loc'], 'low']:
-                    print("Not sertain yet at %s, wait" % ding_di_list[i])
-
-        # 当前为底
-        elif ding_di_list[i]['fenxing'] == 'di':
-            # 起点特别处理：笔起点至下一个顶底就不够一笔条件时，直接设定第三个顶底为笔终点
-            if (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i == 0:
-                data.ix[ding_di_list[i+3]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'high']
-                #del ding_di_list[i+1]
-                #del ding_di_list[i+2]
-            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底不够成一笔时
-            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
-            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 如果下一顶创了新高
-                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
-                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    if not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-                # 下一顶未创新高时
-                elif data.ix[ding_di_list[i-1]['loc'], 'high'] > data.ix[ding_di_list[i+1]['loc'], 'high']:
-                    print("Not sertain yet at %s, wait" % ding_di_list[i])
-
-            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底不够成一笔时
-            elif (ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] <= 3) and i > 0 \
-            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
-                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-                    continue
-                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
-                    data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i]['loc'], 'bi_value'] = np.nan
-                    data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-                else:
-                    data.ix[ding_di_list[i+2]['loc'], 'bi_value'] = data.ix[ding_di_list[i+2]['loc'], 'low']
-                    #del ding_di_list[i+1]
-
-            # 后续发展中遇到当前顶底标记为笔终点，下一个顶底够成一笔时
-            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 and i > 0 \
-            and (not np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                data.ix[ding_di_list[i]['loc'], 'bi_value'] = data.ix[ding_di_list[i]['loc'], 'low']
-                data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-            # 后续发展中遇到当前顶底未标记为笔终点，下一个顶底够成一笔时
-            elif ding_di_list[i+1]['loc'] - ding_di_list[i]['loc'] > 3 and i > 0 \
-            and (np.isnan(data.ix[ding_di_list[i]['loc'], 'bi_value'])):
-                # 前一顶底也未标记为笔终点时，直接标记下一顶底为笔终点
-                if (np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value'])):
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-                    continue
-                # 如果下一顶创了新高时
-                if data.ix[ding_di_list[i-1]['loc'], 'high'] <= data.ix[ding_di_list[i+1]['loc'], 'high']:
-                    if not np.isnan(data.ix[ding_di_list[i-1]['loc'], 'bi_value']):
-                        data.ix[ding_di_list[i-1]['loc'], 'bi_value'] = np.nan
-                        data.ix[ding_di_list[i-1]['loc'], 'end_change'] = True
-                    data.ix[ding_di_list[i+1]['loc'], 'bi_value'] = data.ix[ding_di_list[i+1]['loc'], 'high']
-                # 如果下一顶未创新高时，暂不确定
-                elif data.ix[ding_di_list[i-1]['loc'], 'high'] > data.ix[ding_di_list[i+1]['loc'], 'high']:
-                    print("Not sertain yet at %s, wait" % ding_di_list[i])
-
-
-        if i >= len(ding_di_list) - 3:
-            break
-    return data
-
-def tag_bi_line1(data = None):
+def tag_bi_line_mm(data = None):
     """给标记顶底之后的数据画笔
     """
     if data is None:
@@ -584,7 +162,7 @@ def tag_bi_line1(data = None):
                 # 标识当前底为可能的笔节点
                 possible_di_start['loc'] = ding_di_list[i]['loc']
                 possible_di_start['value'] = ding_di_list[i]['low']
-                ding_list.clear()
+                ding_list = []
                 continue
             # 底 前面有可能为笔起点的顶，并且与之间隔3根K线以上，同时当前K线底小于前面可能顶的顶并且是最低底时
             elif possible_ding_start['loc'] >= 0 \
@@ -599,7 +177,7 @@ def tag_bi_line1(data = None):
                 # 标识当前底为可能的笔节点
                 possible_di_start['loc'] = ding_di_list[i]['loc']
                 possible_di_start['value'] = ding_di_list[i]['low']
-                ding_list.clear()
+                ding_list = []
                 continue
         # 当前为顶分型  
         elif ding_di_list[i]['fenxing'] == 'ding':
@@ -625,7 +203,7 @@ def tag_bi_line1(data = None):
                 # 标识当前顶为可能的笔节点
                 possible_ding_start['loc'] = ding_di_list[i]['loc']
                 possible_ding_start['value'] = ding_di_list[i]['high']
-                di_list.clear()
+                di_list = []
                 continue
             # 顶 前面有可能为笔起点的底，并且与之间隔3根K线以上，同时当前K线顶小于前面可能底的底并且是最高顶时
             elif possible_di_start['loc'] >= 0 \
@@ -640,16 +218,16 @@ def tag_bi_line1(data = None):
                 # 标识当前顶为可能的笔节点
                 possible_ding_start['loc'] = ding_di_list[i]['loc']
                 possible_ding_start['value'] = ding_di_list[i]['high']
-                di_list.clear()
+                di_list = []
                 continue
     return data
-def tag_bi_line2(data = None):
-    """给标记顶底之后的数据画笔
-    """
+
+def tag_bi_line(data = None):
+    """给标记顶底之后的数据画笔 """
     if data is None:
         return None
 
-    # 取出笔开始的所有顶底标记，方便循环处理
+    # 取出所有顶底标记，方便循环处理
     ding_di_list = []
     for i in range(0, len(data)-1):
         if type(data.ix[i, 'fenxing']) == str:
@@ -691,7 +269,8 @@ def tag_bi_line2(data = None):
                         continue
                 elif di_start['loc'] >= 0:
                     if di_start['loc'] < ding_start['loc']:
-                        if ding_di_list[i]['loc'] - di_start['loc'] > 3:
+                        if ding_di_list[i]['loc'] - di_start['loc'] > 3 \
+                        and ding_di_list[i]['high'] > ding_start['value']:
                             pre_ding_start['loc'] = ding_start['loc']
                             pre_ding_start['value'] = ding_start['value']
                             ding_start['loc'] = ding_di_list[i]['loc']
@@ -701,7 +280,8 @@ def tag_bi_line2(data = None):
                                 data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
                             continue
                     elif di_start['loc'] > ding_start['loc']:
-                        if ding_di_list[i]['loc'] - di_start['loc'] > 3:
+                        if ding_di_list[i]['loc'] - di_start['loc'] > 3 \
+                        and ding_di_list[i]['high'] > di_start['value']:
                             pre_ding_start['loc'] = ding_start['loc']
                             pre_ding_start['value'] = ding_start['value']
                             ding_start['loc'] = ding_di_list[i]['loc']
@@ -741,7 +321,8 @@ def tag_bi_line2(data = None):
                         continue
                 elif ding_start['loc'] >= 0:
                     if di_start['loc'] > ding_start['loc']:
-                        if ding_di_list[i]['loc'] - ding_start['loc'] > 3:
+                        if ding_di_list[i]['loc'] - ding_start['loc'] > 3 \
+                        and ding_di_list[i]['low'] < di_start['value']:
                             pre_di_start['loc'] = di_start['loc']
                             pre_di_start['value'] = di_start['value']
                             di_start['loc'] = ding_di_list[i]['loc']
@@ -751,7 +332,8 @@ def tag_bi_line2(data = None):
                                 data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
                             continue
                     elif di_start['loc'] < ding_start['loc']:
-                        if ding_di_list[i]['loc'] - ding_start['loc'] > 3:
+                        if ding_di_list[i]['loc'] - ding_start['loc'] > 3 \
+                        and ding_di_list[i]['low'] < ding_start['value']:
                             pre_di_start['loc'] = di_start['loc']
                             pre_di_start['value'] = di_start['value']
                             di_start['loc'] = ding_di_list[i]['loc']
@@ -779,8 +361,84 @@ def tag_duan_line(data = None):
     """Class 67"""
     if data is None:
         return None
-    bi_data = data[~np.isnan(data.bi_value)]
-    print(bi_data)
+
+    # 取出所有标记为笔节点的顶底标记，方便循环处理
+    bi_ding_di_list = []
+    for i in range(0, len(data)):
+        if type(data.ix[i, 'fenxing']) == str:
+            if data.ix[i, 'fenxing'].find('di') != -1 \
+            and data.ix[i, 'bi_value'] > 0:
+                ding_di = {}
+                ding_di['loc'] = i
+                ding_di['fenxing'] = data.ix[i, 'fenxing']
+                ding_di['high'] = data.ix[i, 'high']
+                ding_di['low'] = data.ix[i, 'low']
+                bi_ding_di_list.append(ding_di)
+            else:
+                pass
+
+    # 顶底数不够4个时，不构成段
+    if len(bi_ding_di_list) < 4:
+        print("Number of ding_di less than 4, please wait!")
+        exit
+
+    shang = {}
+    shang_list = []
+    xia = {}
+    xia_list = []
+    for i in range(0, len(bi_ding_di_list)-1):
+        if bi_ding_di_list[i]['fenxing'] == 'ding':
+            xia['high_loc'] = bi_ding_di_list[i]['loc']
+            xia['high_value'] = bi_ding_di_list[i]['high']
+            xia['low_loc'] = bi_ding_di_list[i+1]['loc']
+            xia['low_value'] = bi_ding_di_list[i+1]['low']
+            xia_list.append(xia)
+        elif bi_ding_di_list[i]['fenxing'] == 'di':
+            shang['low_loc'] = bi_ding_di_list[i]['loc']
+            shang['low_value'] = bi_ding_di_list[i]['low']
+            shang['high_loc'] = bi_ding_di_list[i+1]['loc']
+            shang['high_value'] = bi_ding_di_list[i+1]['high']
+            shang_list.append(xia)
+
+    # 处理包含关系
+    for i in range(0, len(shang_list) - 1):
+        if shang_list[i]['low_value'] < shang_list[i+1]['low_value'] \
+        and shang_list[i]['high_value'] > shang_list[i+1]['high_value']:
+            shang_list.remove(i+1)
+            if i >= len(shang_list) - 1:
+                break
+        elif shang_list[i]['low_value'] > shang_list[i+1]['low_value'] \
+        and shang_list[i]['high_value'] < shang_list[i+1]['high_value']:
+            shang_list.remove(i)
+            if i >= len(shang_list) - 1:
+                break
+    for i in range(0, len(xia_list) - 1):
+        if xia_list[i]['low_value'] < xia_list[i+1]['low_value'] \
+        and xia_list[i]['high_value'] > xia_list[i+1]['high_value']:
+            xia_list.remove(i+1)
+            if i >= len(xia_list) - 1:
+                break
+        elif xia_list[i]['low_value'] > xia_list[i+1]['low_value'] \
+        and xia_list[i]['high_value'] < xia_list[i+1]['high_value']:
+            xia_list.remove(i)
+            if i >= len(xia_list) - 1:
+                break
+
+    # 标记笔特征序列的顶底,上行笔序列中找底，下行笔序列中找顶
+    for i in range(1, len(shang_list) - 1):
+        if shang_list[i]['low_value'] < shang_list[i-1]['low_value'] \
+        and shang_list[i]['low_value'] < shang_list[i+1]['low_value'] \
+        and shang_list[i]['high_value'] < shang_list[i-1]['high_value'] \
+        and shang_list[i]['high_value'] < shang_list[i+1]['high_value']:
+            data.ix[shang_list[i]['low_loc'], 'bi_fenxing'] = 'di'
+            data.ix[shang_list[i]['low_loc'], 'duan_value'] = shang_list[i]['low_value']
+    for i in range(1, len(xia_list) - 1):
+        if xia_list[i]['high_value'] > xia_list[i-1]['high_value'] \
+        and xia_list[i]['high_value'] > xia_list[i+1]['high_value'] \
+        and xia_list[i]['low_value'] > xia_list[i-1]['low_value'] \
+        and xia_list[i]['low_value'] > xia_list[i+1]['low_value']:
+            data.ix[xia_list[i]['high_loc'], 'bi_fenxing'] = 'ding'
+            data.ix[shang_list[i]['high_loc'], 'duan_value'] = shang_list[i]['high_value']
 
     return data
 
@@ -846,25 +504,32 @@ def plot_data(data = None, single=False):
     if 'bi_value' in data.columns:
         bi_data = data[~np.isnan(data.bi_value)]
         ax.plot(np.array(bi_data.t), np.array(bi_data.bi_value))
+
+    # 有段标记时添加段线条 
+    if 'duan_value' in data.columns:
+        print("duan line added")
+        duan_data = data[~np.isnan(data.duan_value)]
+        ax.plot(np.array(duan_data.t), np.array(duan_data.duan_value), color='b', linewidth=2)
     plt.show()
 
 def main():
     #data = ts.get_hist_data('002047','2016-01-11').sort_index()
-    data = pd.read_csv(u'./sh_M.csv')
-    data = data.set_index('date')
+    data = ts.get_hist_data('sh','2013-01-11',ktype='W').sort_index()
+    # data = pd.read_csv(u'./sh_M.csv')
+    # data = data.set_index('date')
     print("Before baohan process: %s" % len(data))
     #plot_data(data, single=True)
 
     data = baohan_process(data)
     print("After baohan process: %s" % len(data))
-    data = find_possible_ding_di1(data)
+    data = find_possible_ding_di(data)
     print("After find ding di: %s" % len(data))
-    data = tag_bi_line2(data)
+    data = tag_bi_line(data)
     plot_data(data, single=True)
 
-    # data = clear_3lian_ding_di(data)
-    # print("After clear 3lian ding di: %s" % len(data))
-    # plot_data(data, single=True)
+    data = tag_duan_line(data)
+    plot_data(data, single=True)
+
 
 
 if __name__ == '__main__':
