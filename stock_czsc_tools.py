@@ -393,52 +393,86 @@ def tag_duan_line(data = None):
             xia['low_loc'] = bi_ding_di_list[i+1]['loc']
             xia['low_value'] = bi_ding_di_list[i+1]['low']
             xia_list.append(xia)
+            xia = {}
         elif bi_ding_di_list[i]['fenxing'] == 'di':
             shang['low_loc'] = bi_ding_di_list[i]['loc']
             shang['low_value'] = bi_ding_di_list[i]['low']
             shang['high_loc'] = bi_ding_di_list[i+1]['loc']
             shang['high_value'] = bi_ding_di_list[i+1]['high']
-            shang_list.append(xia)
+            shang_list.append(shang)
+            shang = {}
 
-    # 处理包含关系
-    for i in range(0, len(shang_list) - 1):
-        if shang_list[i]['low_value'] < shang_list[i+1]['low_value'] \
-        and shang_list[i]['high_value'] > shang_list[i+1]['high_value']:
-            shang_list.remove(i+1)
-            if i >= len(shang_list) - 1:
-                break
-        elif shang_list[i]['low_value'] > shang_list[i+1]['low_value'] \
-        and shang_list[i]['high_value'] < shang_list[i+1]['high_value']:
-            shang_list.remove(i)
-            if i >= len(shang_list) - 1:
-                break
-    for i in range(0, len(xia_list) - 1):
-        if xia_list[i]['low_value'] < xia_list[i+1]['low_value'] \
-        and xia_list[i]['high_value'] > xia_list[i+1]['high_value']:
-            xia_list.remove(i+1)
-            if i >= len(xia_list) - 1:
-                break
-        elif xia_list[i]['low_value'] > xia_list[i+1]['low_value'] \
-        and xia_list[i]['high_value'] < xia_list[i+1]['high_value']:
-            xia_list.remove(i)
-            if i >= len(xia_list) - 1:
-                break
+    pd_shang = pd.DataFrame(shang_list)
+    pd_xia = pd.DataFrame(xia_list)
+    # 处理上行笔特征序列包含关系，往底靠
+    for i in range(0, len(pd_shang) - 1):
+        if pd_shang.ix[i, 'low_value'] < pd_shang.ix[i+1, 'low_value'] \
+        and pd_shang.ix[i, 'high_value'] > pd_shang.ix[i+1, 'high_value']:
+            for j in range(1, len(pd_shang) - i - 1):
+                if pd_shang.ix[i, 'low_value'] < pd_shang.ix[i+j, 'low_value'] \
+                and pd_shang.ix[i, 'high_value'] > pd_shang.ix[i+j, 'high_value']:
+                    pd_shang.ix[i, 'high_value'] = pd_shang.ix[i+j, 'high_value']
+                    pd_shang.ix[i+j, 'remove'] = True
+                else:
+                    break
+        elif pd_shang.ix[i, 'low_value'] > pd_shang.ix[i+1, 'low_value'] \
+        and pd_shang.ix[i, 'high_value'] < pd_shang.ix[i+1, 'high_value']:
+            pd_shang.ix[i+1, 'high_value'] = pd_shang.ix[i, 'high_value']
+            pd_shang.ix[i, 'remove'] = True
+    pd_shang = pd_shang.drop(pd_shang[pd_shang.remove==True].index)
+    pd_shang = pd_shang.set_index('low_loc')
+    pd_shang = pd_shang.reset_index()
+
+    # 处理上行笔特征序列包含关系，往顶靠
+    for i in range(0, len(pd_xia) - 1):
+        if pd_xia.ix[i, 'low_value'] < pd_xia.ix[i+1, 'low_value'] \
+        and pd_xia.ix[i, 'high_value'] > pd_xia.ix[i+1, 'high_value']:
+            for j in range(1, len(pd_xia) - i - 1):
+                if pd_xia.ix[i, 'low_value'] < pd_xia.ix[i+j, 'low_value'] \
+                and pd_xia.ix[i, 'high_value'] > pd_xia.ix[i+j, 'high_value']:
+                    pd_xia.ix[i, 'high_value'] = pd_xia.ix[i+j, 'high_value']
+                    pd_xia.ix[i+j, 'remove'] = True
+                else:
+                    break
+        elif pd_xia.ix[i, 'low_value'] > pd_xia.ix[i+1, 'low_value'] \
+        and pd_xia.ix[i, 'high_value'] < pd_xia.ix[i+1, 'high_value']:
+            pd_xia.ix[i+1, 'low_value'] = pd_xia.ix[i, 'low_value']
+            pd_xia.ix[i, 'remove'] = True
+    pd_xia = pd_xia.drop(pd_xia[pd_xia.remove==True].index)
+    pd_xia = pd_xia.set_index('high_loc')
+    pd_xia = pd_xia.reset_index()
 
     # 标记笔特征序列的顶底,上行笔序列中找底，下行笔序列中找顶
-    for i in range(1, len(shang_list) - 1):
-        if shang_list[i]['low_value'] < shang_list[i-1]['low_value'] \
-        and shang_list[i]['low_value'] < shang_list[i+1]['low_value'] \
-        and shang_list[i]['high_value'] < shang_list[i-1]['high_value'] \
-        and shang_list[i]['high_value'] < shang_list[i+1]['high_value']:
-            data.ix[shang_list[i]['low_loc'], 'bi_fenxing'] = 'di'
-            data.ix[shang_list[i]['low_loc'], 'duan_value'] = shang_list[i]['low_value']
-    for i in range(1, len(xia_list) - 1):
-        if xia_list[i]['high_value'] > xia_list[i-1]['high_value'] \
-        and xia_list[i]['high_value'] > xia_list[i+1]['high_value'] \
-        and xia_list[i]['low_value'] > xia_list[i-1]['low_value'] \
-        and xia_list[i]['low_value'] > xia_list[i+1]['low_value']:
-            data.ix[xia_list[i]['high_loc'], 'bi_fenxing'] = 'ding'
-            data.ix[shang_list[i]['high_loc'], 'duan_value'] = shang_list[i]['high_value']
+    for i in range(1, len(pd_shang) - 1):
+        if pd_shang.ix[i, 'low_value'] <= pd_shang.ix[i-1, 'low_value'] \
+        and pd_shang.ix[i, 'low_value'] <= pd_shang.ix[i+1, 'low_value'] \
+        and pd_shang.ix[i, 'high_value'] <= pd_shang.ix[i-1, 'high_value'] \
+        and pd_shang.ix[i, 'high_value'] <= pd_shang.ix[i+1, 'high_value']:
+            pd_shang.ix[i, 'duan_value'] = pd_shang.ix[i, 'low_value']
+            data.ix[pd_shang.ix[i, 'low_loc'], 'bi_fenxing'] = 'di'
+            data.ix[pd_shang.ix[i, 'low_loc'], 'duan_value'] = pd_shang.ix[i, 'low_value']
+    for i in range(1, len(pd_xia) - 1):
+        if pd_xia.ix[i, 'high_value'] >= pd_xia.ix[i-1, 'high_value'] \
+        and pd_xia.ix[i, 'high_value'] >= pd_xia.ix[i+1, 'high_value'] \
+        and pd_xia.ix[i, 'low_value'] >= pd_xia.ix[i-1, 'low_value'] \
+        and pd_xia.ix[i, 'low_value'] >= pd_xia.ix[i+1, 'low_value']:
+            pd_xia.ix[i, 'duan_value'] = pd_xia.ix[i, 'high_value']
+            data.ix[pd_xia.ix[i, 'high_loc'], 'bi_fenxing'] = 'ding'
+            data.ix[pd_xia.ix[i, 'high_loc'], 'duan_value'] = pd_xia.ix[i, 'high_value']
+
+    # print(pd_shang[pd_shang.duan_value > 0])
+    # print(pd_xia[pd_xia.duan_value > 0])
+    # 查看包含处理后的结果
+    # fig, axes = plt.subplots(2, 1, sharex=True, figsize=(8,6))
+    # mpf.candlestick2_ochl(axes[0], pd_shang['low_value'],pd_shang['low_value'],pd_shang['high_value'],pd_shang['low_value'], width=0.6, colorup='r', colordown='g')
+    # axes[0].set_title("Shang")
+    # di_pd_shang = pd_shang[pd_shang.duan_value>0]
+    # axes[0].plot(np.array(di_pd_shang.index), np.array(di_pd_shang.low_value), '^')
+    # mpf.candlestick2_ochl(axes[1], pd_xia['low_value'],pd_xia['low_value'],pd_xia['high_value'],pd_xia['low_value'], width=0.6, colorup='r', colordown='g')
+    # axes[1].set_title("Xia")
+    # ding_pd_xia = pd_xia[pd_xia.duan_value>0]
+    # axes[1].plot(np.array(ding_pd_xia.index), np.array(ding_pd_xia.high_value), 'v')
+    # plt.show()
 
     return data
 
@@ -507,14 +541,14 @@ def plot_data(data = None, single=False):
 
     # 有段标记时添加段线条 
     if 'duan_value' in data.columns:
-        print("duan line added")
         duan_data = data[~np.isnan(data.duan_value)]
+        # print("duan_data %s" % duan_data)
         ax.plot(np.array(duan_data.t), np.array(duan_data.duan_value), color='b', linewidth=2)
     plt.show()
 
 def main():
     #data = ts.get_hist_data('002047','2016-01-11').sort_index()
-    data = ts.get_hist_data('sh','2013-01-11',ktype='W').sort_index()
+    data = ts.get_hist_data('sh','2003-01-11',ktype='D').sort_index()
     # data = pd.read_csv(u'./sh_M.csv')
     # data = data.set_index('date')
     print("Before baohan process: %s" % len(data))
@@ -525,7 +559,7 @@ def main():
     data = find_possible_ding_di(data)
     print("After find ding di: %s" % len(data))
     data = tag_bi_line(data)
-    plot_data(data, single=True)
+    # plot_data(data, single=True)
 
     data = tag_duan_line(data)
     plot_data(data, single=True)
