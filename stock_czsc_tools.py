@@ -302,8 +302,6 @@ def tag_bi_line(data = None):
                                 and di_start['loc'] - pre_ding_start['loc'] > 3:
                                     data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
                                 continue
-
-
         elif ding_di_list[i]['fenxing'] == 'di':
             if di_start['loc'] < 0:
                 pre_di_start['loc'] = di_start['loc']
@@ -363,24 +361,28 @@ def tag_duan_line(data = None):
         return None
 
     # 取出所有标记为笔节点的顶底标记，方便循环处理
-    bi_ding_di_list = []
-    for i in range(0, len(data)):
-        if type(data.ix[i, 'fenxing']) == str:
-            if data.ix[i, 'fenxing'].find('di') != -1 \
-            and data.ix[i, 'bi_value'] > 0:
-                ding_di = {}
-                ding_di['loc'] = i
-                ding_di['fenxing'] = data.ix[i, 'fenxing']
-                ding_di['high'] = data.ix[i, 'high']
-                ding_di['low'] = data.ix[i, 'low']
-                bi_ding_di_list.append(ding_di)
-            else:
-                pass
+    if 'bi_value' in data.columns:
+        bi_ding_di_list = []
+        for i in range(0, len(data)):
+            if type(data.ix[i, 'fenxing']) == str:
+                if data.ix[i, 'fenxing'].find('di') != -1 \
+                and data.ix[i, 'bi_value'] > 0:
+                    ding_di = {}
+                    ding_di['loc'] = i
+                    ding_di['fenxing'] = data.ix[i, 'fenxing']
+                    ding_di['high'] = data.ix[i, 'high']
+                    ding_di['low'] = data.ix[i, 'low']
+                    bi_ding_di_list.append(ding_di)
+                else:
+                    pass
+    else:
+        print("No bi tag in data")
+        return data
 
     # 顶底数不够4个时，不构成段
     if len(bi_ding_di_list) < 4:
         print("Number of ding_di less than 4, please wait!")
-        exit
+        return data
 
     shang = {}
     shang_list = []
@@ -419,10 +421,10 @@ def tag_duan_line(data = None):
         and pd_shang.ix[i, 'high_value'] < pd_shang.ix[i+1, 'high_value']:
             pd_shang.ix[i+1, 'high_value'] = pd_shang.ix[i, 'high_value']
             pd_shang.ix[i, 'remove'] = True
-    pd_shang = pd_shang.drop(pd_shang[pd_shang.remove==True].index)
+    if 'remove' in pd_shang.columns:
+        pd_shang = pd_shang.drop(pd_shang[pd_shang.remove==True].index)
     pd_shang = pd_shang.set_index('low_loc')
     pd_shang = pd_shang.reset_index()
-
     # 处理上行笔特征序列包含关系，往顶靠
     for i in range(0, len(pd_xia) - 1):
         if pd_xia.ix[i, 'low_value'] < pd_xia.ix[i+1, 'low_value'] \
@@ -438,7 +440,8 @@ def tag_duan_line(data = None):
         and pd_xia.ix[i, 'high_value'] < pd_xia.ix[i+1, 'high_value']:
             pd_xia.ix[i+1, 'low_value'] = pd_xia.ix[i, 'low_value']
             pd_xia.ix[i, 'remove'] = True
-    pd_xia = pd_xia.drop(pd_xia[pd_xia.remove==True].index)
+    if 'remove' in pd_xia.columns:
+        pd_xia = pd_xia.drop(pd_xia[pd_xia.remove==True].index)
     pd_xia = pd_xia.set_index('high_loc')
     pd_xia = pd_xia.reset_index()
 
@@ -481,7 +484,11 @@ def plot_data(data = None, single=False):
     if data is None:
         print("Data is None!")
         exit
-    dates = [datetime.datetime(*time.strptime(i, '%Y-%m-%d')[:6]) for i in data.index]
+
+    if len(str(data.index[0])) == 10:
+        dates = [datetime.datetime(*time.strptime(str(i), '%Y-%m-%d')[:6]) for i in data.index]
+    else:
+        dates = [datetime.datetime(*time.strptime(str(i), '%Y-%m-%d %H:%M:%S')[:6]) for i in data.index]
 
     # 多指标同图
     if not single:
@@ -547,8 +554,9 @@ def plot_data(data = None, single=False):
     plt.show()
 
 def main():
-    #data = ts.get_hist_data('002047','2016-01-11').sort_index()
-    data = ts.get_hist_data('sh','2003-01-11',ktype='D').sort_index()
+    #data = ts.get_hist_data('sh','2003-01-11',ktype='D').sort_index()
+    #data = ts.get_hist_data('sh','2016-11-01',ktype='30').sort_index()
+    data = ts.get_hist_data('sh','2010-10-01').sort_index()
     # data = pd.read_csv(u'./sh_M.csv')
     # data = data.set_index('date')
     print("Before baohan process: %s" % len(data))
@@ -563,7 +571,6 @@ def main():
 
     data = tag_duan_line(data)
     plot_data(data, single=True)
-
 
 
 if __name__ == '__main__':

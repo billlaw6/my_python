@@ -19,7 +19,8 @@ import pandas as pd
 import sqlalchemy
 from sqlalchemy import import create_engine
 
-engine = create_engine('mysql+pymysql://root:654321@127.0.0.1/stocks?charset=utf8')
+engine_mysql = create_engine('mysql+pymysql://root:654321@127.0.0.1/stocks?charset=utf8')
+engine_sqlite = create_engine('sqlite:////test_stocks.db3')
 
 def stock_select_tiantian(totals_limit=15000, reservedPerShare_limit=2, esp_limit=0.5, bvps_limit=0.3):
     """
@@ -33,10 +34,6 @@ def stock_select_tiantian(totals_limit=15000, reservedPerShare_limit=2, esp_limi
     """
     #stocks = ts.get_stock_basics()
     stocks = pd.read_sql_table('stock_basics', engine)
-    # stocks[stocks.index=='002780']
-    # esp_dis = stocks['esp'].plot(kind='hist')
-    # esp_dis = stocks['total'].plot(kind='hist')
-    # esp_dis1 = stocks[(stocks.esp>0.5) & (stocks.esp<2)]['esp'].plot(kind='box')
     return stocks[(stocks.totals < totals_limit) & (stocks.esp > esp_limit) & (stocks.reservedPerShare > reservedPerShare_limit) & (stocks.bvps > bvps_limit)]
 
 def limitup_count_filter(stocks=None, duration=30, count_limit=3, continuous=True):
@@ -82,6 +79,13 @@ def fltp_slht_filter(stocks, duration=30):
     import stock_get_data as sgd
     sgd.get_trade_data(stocks)
 
+def czsc_select(data):
+    stocks = ts.get_stock_basics()
+    basic_stock_list = stocks[(stocks.totals < totals_limit) & (stocks.esp > esp_limit) & (stocks.reservedPerShare > reservedPerShare_limit) & (stocks.bvps > bvps_limit)]
+    today_list = ts.get_today_all()
+    test_data.to_sql('sh_test_data', con, if_exists='replace', index=True, dtype={'date': 'CHAR'})
+    test_data.to_sql('sh_test_data', engine, if_exists='replace', index=True, dtype={'date': sqlalchemy.ty pes.CHAR(20)})
+                       
 
 def main():
     selected_stocks = stock_select_tiantian()
@@ -90,8 +94,6 @@ def main():
     result = limitup_count_filter(selected_stocks)
     result[result.industry.str.contains(u'医')]
     print(result)
-
-    # Fangliangtupo+Suolianghuitiao
 
 
 if __name__ == '__main__':
