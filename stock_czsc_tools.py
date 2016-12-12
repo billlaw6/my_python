@@ -11,7 +11,6 @@ import datetime
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.finance as mpf
-import talib as ta
 import numpy as np
 import pandas as pd
 

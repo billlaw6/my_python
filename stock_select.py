@@ -13,11 +13,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.finance as mpf
-import talib as ta
 import numpy as np
 import pandas as pd
 import sqlalchemy
-from sqlalchemy import import create_engine
+from sqlalchemy import create_engine
+import stock_czsc_tools as sct
 
 engine_mysql = create_engine('mysql+pymysql://root:654321@127.0.0.1/stocks?charset=utf8')
 engine_sqlite = create_engine('sqlite:////test_stocks.db3')
@@ -84,16 +84,21 @@ def czsc_select(data):
     basic_stock_list = stocks[(stocks.totals < totals_limit) & (stocks.esp > esp_limit) & (stocks.reservedPerShare > reservedPerShare_limit) & (stocks.bvps > bvps_limit)]
     today_list = ts.get_today_all()
     test_data.to_sql('sh_test_data', con, if_exists='replace', index=True, dtype={'date': 'CHAR'})
-    test_data.to_sql('sh_test_data', engine, if_exists='replace', index=True, dtype={'date': sqlalchemy.ty pes.CHAR(20)})
+    test_data.to_sql('sh_test_data', engine, if_exists='replace', index=True, dtype={'date': sqlalchemy.types.CHAR(20)})
                        
 
 def main():
-    selected_stocks = stock_select_tiantian()
-    # Tiantian xuangufa
-    # result = limitup_count_filter(selected_stocks, duration=180, count_limit=5)
-    result = limitup_count_filter(selected_stocks)
-    result[result.industry.str.contains(u'医')]
-    print(result)
+    #selected_stocks = stock_select_tiantian()
+    ## Tiantian xuangufa
+    ## result = limitup_count_filter(selected_stocks, duration=180, count_limit=5)
+    #result = limitup_count_filter(selected_stocks)
+    #result[result.industry.str.contains(u'医')]
+    #print(result)
+    data = ts.get_h_data('002675')
+    data = sct.baohan_process(data)
+    data = sct.find_possible_ding_di(data)
+    data = sct.tag_bi_line(data)
+    sct.plot_data(data, single=True)
 
 
 if __name__ == '__main__':
