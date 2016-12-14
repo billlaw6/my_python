@@ -13,6 +13,7 @@ import matplotlib.dates as mdates
 import matplotlib.finance as mpf
 import numpy as np
 import pandas as pd
+import talib as ta
 
 plt.rcParams['font.family'] = ['sans-serif'] # 用来正常显示中文标签
 plt.rcParams['font.sans-serif'] = ['Liberation Sans'] # 用来正常显示中文标签
