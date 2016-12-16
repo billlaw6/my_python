@@ -89,6 +89,7 @@ class CZSC(object):
                 print("Shem Ma K xian guanxi?")
                 data.ix[i, 'type'] = 'unknown'
         self.data_no_baohan = data.drop(data[data.delete==True].index)
+        return self.data_no_baohan
 
 
     def find_possible_ding_di(self, data = None):
@@ -113,6 +114,7 @@ class CZSC(object):
             else:
                 data.ix[i, 'fenxing'] = data.ix[i, 'type']
         self.data_ding_di = data
+        return self.data_ding_di
 
     def tag_bi_line_mm(self, data = None):
         """给标记顶底之后的数据画笔，采用最高或最低顶底优先原则"""
@@ -219,6 +221,7 @@ class CZSC(object):
                     di_list = []
                     continue
         self.data_bi_mm = data
+        return self.data_bi_mm
 
     def tag_bi_line(self, data = None):
         """给标记顶底之后的数据画笔，采用后出现的顶底优先原则"""
@@ -351,6 +354,7 @@ class CZSC(object):
                                         data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
                                     continue
         self.data_bi = data
+        return self.data_bi
 
     def tag_duan_line(self, data = None, show = False):
         """Class 67"""
@@ -468,6 +472,7 @@ class CZSC(object):
             ding_pd_xia = pd_xia[pd_xia.duan_value>0]
             axes[1].plot(np.array(ding_pd_xia.index), np.array(ding_pd_xia.high_value), 'v')
             plt.show()
+        return  self.data_duan
 
 
     def plot_data(self, data = None, single=False):
