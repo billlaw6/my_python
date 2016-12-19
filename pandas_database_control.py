@@ -14,6 +14,8 @@ import pandas as pd
 var_names = locals()
 today = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
 engine = create_engine('mysql+pymysql://root:654321@127.0.0.1/stocks?charset=utf8')
+# engine = create_engine('sqlite:////db_name.sqlite')
+# engine = create_engine('sqlite:////:memory:')
 
 def localise_data_for_select():
     """ """
