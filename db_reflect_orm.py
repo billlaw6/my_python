@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
-# File Name: db_schema1.py
+# File Name: db_reflect_orm.py
 # Author: bill_law6
 # mail: bill_law6@163.com
 # Created Time: Mon 19 Dec 2016 10:35:40 PM CST
@@ -15,5 +15,6 @@ engine = create_engine('mysql+pymysql://root:654321@127.0.0.1/stocks?charset=utf
 Base.prepare(engine, reflect=True)
 
 print(Base.classes.keys())
+print(Base.classes['stock_hist_data1'])
 
 

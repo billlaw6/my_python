@@ -13,7 +13,6 @@ import matplotlib.finance as mpf
 import numpy as np
 import pandas as pd
 import talib as ta
-import pandas as pd
 
 class DataError(ValueError):
     str = "Data should be DataFrame from tushare.get_hist_data() \n"
@@ -96,6 +95,8 @@ class CZSC(object):
         """寻找和标识顶和底，数据类型应该是处理完包含关系之后的数据"""
         if data is None:
             data = self.data_ori
+        data = self.baohan_process(data)
+
         for i in range(2, len(data)-2):
             if data.ix[i, 'high'] > data.ix[i - 1, 'high'] \
             and data.ix[i, 'high'] > data.ix[i - 2, 'high'] \
@@ -119,6 +120,8 @@ class CZSC(object):
     def tag_bi_line_mm(self, data = None):
         """给标记顶底之后的数据画笔，采用最高或最低顶底优先原则"""
         # 取出笔开始的所有顶底标记，方便循环处理
+        data = self.baohan_process(data)
+        data = self.find_possible_ding_di(data)
         ding_di_list = []
         for i in range(0, len(self.data)-1):
             if type(self.data.ix[i, 'fenxing']) == str:
@@ -227,6 +230,8 @@ class CZSC(object):
         """给标记顶底之后的数据画笔，采用后出现的顶底优先原则"""
         if data is None:
             data = self.data_ding_di
+        data = self.baohan_process(data)
+        data = self.find_possible_ding_di(data)
 
         # 取出所有顶底标记，方便循环处理
         ding_di_list = []
@@ -360,6 +365,10 @@ class CZSC(object):
         """Class 67"""
         if data is None:
             data = self.data_bi
+        data = self.baohan_process(data)
+        data = self.find_possible_ding_di(data)
+        data = self.tag_bi_line(data)
+
         # 取出所有标记为笔节点的顶底标记，方便循环处理
         if 'bi_value' in data.columns:
             bi_ding_di_list = []
