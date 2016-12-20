@@ -33,8 +33,9 @@ class CZSC(object):
         Class65.
         必须从左至右顺序处理包含关系，单次遍历就行。包含处理只会缩短K线，不会产生新的包含关系。
         """
-        if type(data) != pd.core.frame.DataFrame:
-            raise DataError('Data should be DataFrame from tushare.get_hist_data()')
+        print(type(data))
+        # if type(data) != pd.core.frame.DataFrame:
+            # raise DataError('Data should be DataFrame from tushare.get_hist_data()')
         self.data_ori = data
         up_down_flag = 'up'
         for i in range(0, len(data)-1):
@@ -363,8 +364,6 @@ class CZSC(object):
 
     def tag_duan_line(self, data = None, show = False):
         """Class 67"""
-        if data is None:
-            data = self.data_bi
         data = self.baohan_process(data)
         data = self.find_possible_ding_di(data)
         data = self.tag_bi_line(data)
@@ -561,4 +560,5 @@ class CZSC(object):
         plt.show()
 
 
-
+if __name__ == '__main__':
+    pass

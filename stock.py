@@ -82,9 +82,15 @@ class Stock(object):
         return data
 
     def czsc_analysis(self):
-        czsc = CZSC
-        new_data = czsc.tag_duan_line(self.get_hist_data('30'))
-        print(new_data)
+        c = CZSC()
+        d = self.get_hist_data()
+        d = d.set_index('date')
+        d1 = c.baohan_process(d)
+        d2 = c.find_possible_ding_di(d1)
+        d3 = c.tag_bi_line(d2)
+        d4 = c.tag_duan_line(d3)
+        print(d4)
 
 if __name__ == '__main__':
     s = Stock('sh')
+    s.czsc_analysis()
