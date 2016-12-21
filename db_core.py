@@ -7,15 +7,18 @@
 
 from datetime import datetime
 from sqlalchemy import (create_engine, MetaData, Table, Column, DateTime,
-                        Date, Integer, Numeric, String, Index, ForeignKey)
+                       Date, Integer, Numeric, String, Text, Index, ForeignKey)
 
 class DataAccessLayer(object):
+    """ 缠中学缠数据库结构层 """
     connection = None
     engine = None
     conn_string = None
     metadata = MetaData()
 
-    index_data = Table('index_data', metadata,
+
+    # 大盘指数行情列表
+    get_index = Table('get_index', metadata,
         Column('code', String(6)), # 指数代码
         Column('name', String(50)), # 指数名称
         Column('change', Numeric(12, 4)), # 涨跌幅
@@ -24,13 +27,15 @@ class DataAccessLayer(object):
         Column('close', Numeric(12, 4)), # 收盘点位
         Column('high', Numeric(12, 4)), # 最高点位
         Column('low', Numeric(12, 4)), # 最低点位
-        Column('volume', Numeric(12, 4)), # 成交量(手)
+        Column('volume', Numeric(20, 4)), # 成交量(手)
         Column('amount', Integer()), # 成交金额（亿元）
-        Column('created_on', Date(), default = datetime.now), # 获取时间
+        Column('date', Date(), default = datetime.now), # 获取时间
+        Index('ix_get_index', 'code', 'date', unique=True),
     )
 
-    stock_basics = Table('stock_basics', metadata,
-        Column('id', Integer, primary_key=True),
+    # 股票列表
+    get_stock_basics = Table('get_stock_basics', metadata,
+        Column('id', Integer(), primary_key=True),
         Column('code', String(6)),
         Column('name', String(50), index=True), #
         Column('industry', String(30)), # 所属行业
@@ -38,10 +43,10 @@ class DataAccessLayer(object):
         Column('pe', Numeric(12, 4)), # 市盈率
         Column('outstanding', Numeric(12, 4)), # 流通股本(亿)
         Column('totals', Numeric(12, 4)), # 总股本(亿)
-        Column('totalAssets', Numeric(12, 4)), # 总资产(万)
-        Column('liquidAssets', Numeric(12, 4)), # 流动资产
-        Column('fixedAssets', Numeric(12, 4)), # 固定资产
-        Column('reserved', Numeric(12, 4)), # 公积金
+        Column('totalAssets', Numeric(20, 4)), # 总资产(万)
+        Column('liquidAssets', Numeric(20, 4)), # 流动资产
+        Column('fixedAssets', Numeric(20, 4)), # 固定资产
+        Column('reserved', Numeric(20, 4)), # 公积金
         Column('reservedPerShare', Numeric(12, 4)), # 每股公积金
         Column('esp', Numeric(12, 4)), # 每股收益
         Column('bvps', Numeric(12, 4)), # 每股净资
@@ -55,11 +60,11 @@ class DataAccessLayer(object):
         Column('npr', Numeric(12, 4)), # 净利润率(%)
         Column('holders', Integer()), # 股东人数
         Column('created_on', DateTime(), default = datetime.now), # 获取时间
-        Index('ix_stock_basics', 'code', 'industry'),
+        Index('ix_get_stock_basics', 'code', 'industry', unique=True),
     )
 
-    today_all = Table('today_all', metadata,
-        Column('code', String(6), ForeignKey('stock_basics.code')), # 代码
+    get_today_all = Table('get_today_all', metadata,
+        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
         Column('name', String(50), index=True), # 名称
         Column('changepercent', Numeric(12, 4)), # 涨跌幅
         Column('trade', Numeric(12, 4)), # 现价
@@ -67,98 +72,132 @@ class DataAccessLayer(object):
         Column('high', Numeric(12, 4)), # 最高价
         Column('low', Numeric(12, 4)), # 最低价
         Column('settlement', Numeric(12, 4)), # 昨日收盘价
-        Column('volume', Numeric(12, 4)), # 成交量
+        Column('volume', Numeric(20, 4)), # 成交量
         Column('turnoverratio', Numeric(12, 4)), # 换手率
         Column('amount', Numeric(12, 4)), # 成交量
         Column('per', Numeric(12, 4)), # 市盈率
         Column('pb', Numeric(12, 4)), # 市净率
         Column('mktcap', Numeric(12, 4)), # 总市值
         Column('nmc', Numeric(12, 4)), # 流通市值
-        Column('created_on', Date(), default = datetime.now), # 获取时间
+        Column('date', Date(), default = datetime.now), # 获取时间
+        Index('ix_today_all', 'code', 'date', unique=True),
      )
 
 
-    stock_hist_data = Table('stock_hist_data', metadata,
-        Column('id', Integer, primary_key=True),
+    get_hist_data = Table('get_hist_data', metadata,
+        Column('id', Integer(), primary_key=True),
         Column('date', DateTime(), nullable = False),
         Column('open',Numeric(12, 4)),
         Column('high', Numeric(12, 4)),
         Column('close', Numeric(12, 4)),
         Column('low', Numeric(12, 4)),
-        Column('volume', Numeric(12, 4)),
+        Column('volume', Numeric(20, 4)),
         Column('price_change', Numeric(12, 4)),
         Column('p_change', Numeric(12, 4)),
         Column('ma5', Numeric(12, 4)),
         Column('ma10', Numeric(12, 4)),
         Column('ma20', Numeric(12, 4)),
-        Column('v_ma5', Numeric(12, 4)),
-        Column('v_ma10', Numeric(12, 4)),
-        Column('v_ma20', Numeric(12, 4)),
+        Column('v_ma5', Numeric(20, 4)),
+        Column('v_ma10', Numeric(20, 4)),
+        Column('v_ma20', Numeric(20, 4)),
         Column('turnover', Numeric(12, 4)),
         Column('code', String(6)),
-        Column('ktype', String(6)), # K
-        Column('type', String(6)),  # ding_di
-        Column('fenxing', String(6)),
-        Column('bi', Numeric(12, 4)),
-        Column('bi_value', Numeric(12, 4)),
-        Column('duan_value', Numeric(12, 4)),
-        Index('ix_stock_hist_data', 'code', 'date', 'ktype', unique=True),
+        Column('ktype', String(6)), # K线周期
+        Column('type', String(6)),  # 当前K线与后K线形成up还是down关系
+        Column('fenxing', String(6)), # 顶ding和底di标识
+        Column('fx_weight', Numeric(12, 4)), # 分型权重
+        Column('bi_to_be', Numeric(12, 4)), # 可能的笔节点的值
+        Column('bi_value', Numeric(12, 4)), # 确定的笔节点的值
+        Column('duan_value', Numeric(12, 4)), # 段节点的值
+        Index('ix_get_hist_data', 'code', 'date', 'ktype', unique=True),
     )
 
-    profit_data = Table('profit_data', metadata,
-        Column('code', String(6), ForeignKey('stock_basics.code')), # 代码
+    # 业绩报告（主表）
+    get_report_data = Table('get_report_data', metadata,
+        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
         Column('name', String(50), index=True), # 股票名称
-        Column('year', Integer( )), # 分配年份
+        Column('esp', Numeric(12, 4)), # 每股收益
+        Column('esp_yoy', Numeric(12, 4)), # 每股收益同比(%)
+        Column('bvps', Numeric(12, 4)), # 每股净资产
+        Column('roe', Numeric(12, 4)), # 净资产收益率(%)
+        Column('epcf', Numeric(12, 4)), # 每股现金流量(元)
+        Column('net_profits', Numeric(12, 4)), # 净利润(万元)
+        Column('profits_yoy', Numeric(12, 4)), # 净利润同比(%)
+        Column('distrib', Text()), # 分配方案
+        Column('report_date', Date( )), # 公布日期
+        Column('year', Integer(), primary_key=True),
+        Column('quarter', Integer(), primary_key=True),
+        Column('created_on', Date(), default = datetime.now), # 获取时间
+        Index('ix_report_data', 'code', 'year', 'quarter', unique=True),
+    )
+
+    # 分配预案
+    profit_data = Table('profit_data', metadata,
+        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
+        Column('name', String(50), index=True), # 股票名称
+        Column('year', Integer()), # 分配年份
         Column('report_date', Date( )), # 公布日期
         Column('divi', Numeric(12, 4)), # 分红金额（每10股）
         Column('shares', Numeric(12, 4)), # 转增和送股数（每10股）
-	)
+        Column('created_on', Date(), default = datetime.now), # 获取时间
+        Index('ix_profit_data', 'code', 'report_date', unique=True),
+    )
 
-	# 
+    # 业绩预告
     forecast_data = Table('forecast_data', metadata,
-        Column('code', String(6), ForeignKey('stock_basics.code')), # 代码
+        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
         Column('name', String(50), index=True), # 股票名称
         Column('type', String(6)),  # 业绩变动类型【预增、预亏等】
         Column('report_date', Date( )), # 公布日期
         Column('pre_eps', Numeric(12, 4)), # 上年同期每股收益
         Column('range', Numeric(12, 4)), # 业绩变动范围
-	)
+        Column('created_on', Date(), default = datetime.now), # 获取时间
+        Index('ix_forecast_data', 'code', 'report_date', unique=True),
+    )
 
-	#
-    code：股票代码
-    name：股票名称
-    date:解禁日期
-    count:解禁数量（万股）
-    ratio:占总盘比率
+    # 限售股解禁
+    xsg_data = Table('xsg_data', metadata,
+        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
+        Column('name', String(50), index=True), # 股票名称
+        Column('date', Date()), # 解禁日期
+        Column('count', Integer()), # 解禁数量（万股）
+        Column('ratio', Numeric(12, 4)), # 占总盘比率
+        Column('created_on', Date(), default = datetime.now), # 获取时间
+        Index('ix_xsg_data', 'code', 'date', 'count', unique=True),
+    )
 
-	# 基金持股
+    # 基金持股
+    fund_holdings = Table('fund_holdings', metadata,
+        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
+        Column('name', String(50), index=True), # 股票名称
+        Column('date', Date()), # 报告日期
+        Column('nums', Integer()), # 基金家数
+        Column('nlast', Integer()), # 与上期相比（增加或减少了）
+        Column('count', Integer()), # 基金持股数（万股）
+        Column('clast', Integer()), # 与上期相比
+        Column('amount', Numeric(12, 4)), # 基金持股市值
+        Column('ratio', Numeric(12, 4)), # 占流通盘比率
+        Column('created_on', Date(), default = datetime.now), # 获取时间
+        Index('ix_fund_holdings', 'code', 'date', unique=True),
+    )
 
-    code：股票代码
-    name：股票名称
-    date:报告日期
-    nums:基金家数
-    nlast:与上期相比（增加或减少了）
-    count:基金持股数（万股）
-    clast:与上期相比
-    amount:基金持股市值
-    ratio:占流通盘比率
+    # 新股数据
+    new_stocks = Table('new_stocks', metadata,
+        Column('code', String(6), index=True), # 代码
+        Column('name', String(50), index=True), # 股票名称
+        Column('ipo_date', Date()), # 上网发行日期
+        Column('issue_date', Date(), index=True), # 上市日期
+        Column('amount', Numeric(12, 4)), # 上网发行数量(万股)
+        Column('price', Numeric(12, 4)), # 发行价格(元)
+        Column('pe', Numeric(12, 4)), # 发行市盈率
+        Column('limit', Numeric(12, 4)), # 个人申购上限(万股)
+        Column('funds', Numeric(12, 4)), # 募集资金(亿元)
+        Column('ballot', Numeric(12, 4)), # 网上中签率(%)
+        Column('created_on', Date(), default = datetime.now), # 获取时间
+        Index('ix_new_stocks', 'code', 'issue_date', unique=True),
+    )
 
-
-    code：股票代码
-    name：股票名称
-    ipo_date:上网发行日期
-    issue_date:上市日期
-    amount:发行数量(万股)
-    markets:上网发行数量(万股)
-    price:发行价格(元)
-    pe:发行市盈率
-    limit:个人申购上限(万股)
-    funds：募集资金(亿元)
-    ballot:网上中签率(%)
-
-
-
-    db_init(self, conn_string):
+    def db_init(self, conn_string):
         self.engine = create_engine(conn_string or self.conn_string)
         self.metadata.create_all(self.engine)
         self.connection = self.engine.connect()

@@ -409,7 +409,7 @@ def tag_bi_line(data = None):
                 pre_ding_start['value'] = ding_start['value']
                 ding_start['loc'] = ding_di_list[i]['loc']
                 ding_start['value'] = ding_di_list[i]['high']
-                data.ix[ding_start['loc'], 'bi'] = ding_start['value']
+                data.ix[ding_start['loc'], 'bi_to_be'] = ding_start['value']
                 continue
             elif ding_start['loc'] >= 0:
                 if di_start['loc'] < 0:
@@ -418,7 +418,7 @@ def tag_bi_line(data = None):
                         pre_ding_start['value'] = ding_start['value']
                         ding_start['loc'] = ding_di_list[i]['loc']
                         ding_start['value'] = ding_di_list[i]['high']
-                        data.ix[ding_start['loc'], 'bi'] = ding_start['value']
+                        data.ix[ding_start['loc'], 'bi_to_be'] = ding_start['value']
                         continue
                 elif di_start['loc'] >= 0:
                     if di_start['loc'] < ding_start['loc']:
@@ -428,10 +428,11 @@ def tag_bi_line(data = None):
                             pre_ding_start['value'] = ding_start['value']
                             ding_start['loc'] = ding_di_list[i]['loc']
                             ding_start['value'] = ding_di_list[i]['high']
-                            data.ix[ding_start['loc'], 'bi'] = ding_start['value']
+                            data.ix[ding_start['loc'], 'bi_to_be'] = ding_start['value']
                             if pre_ding_start['loc'] > 0 \
                             and di_start['loc'] - pre_ding_start['loc'] > 3:
                                 data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
+                                data.ix[pre_ding_start['loc'], 'bi_to_be'] = pre_ding_start['value']
                             continue
                     elif di_start['loc'] > ding_start['loc']:
                         if ding_di_list[i]['loc'] - di_start['loc'] > 3 \
@@ -440,9 +441,11 @@ def tag_bi_line(data = None):
                             pre_ding_start['value'] = ding_start['value']
                             ding_start['loc'] = ding_di_list[i]['loc']
                             ding_start['value'] = ding_di_list[i]['high']
+                            data.ix[ding_start['loc'], 'bi_to_be'] = ding_start['value']
                             if pre_ding_start['loc'] > 0 \
                             and di_start['loc'] - pre_ding_start['loc'] > 3:
                                 data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
+                                data.ix[pre_ding_start['loc'], 'bi_to_be'] = pre_ding_start['value']
                             continue
                         elif ding_di_list[i]['loc'] - di_start['loc'] <= 3:
                             if ding_di_list[i]['high'] > ding_start['value']:
@@ -452,6 +455,7 @@ def tag_bi_line(data = None):
                                 di_start['value'] = pre_di_start['value']
                                 pre_di_start['loc'] = -1
                                 pre_di_start['value'] = 0
+                                data.ix[pre_di_start['loc'], 'bi_to_be'] = np.NaN
                                 if pre_ding_start['loc'] > 0 \
                                 and di_start['loc'] - pre_ding_start['loc'] > 3:
                                     data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
@@ -470,6 +474,7 @@ def tag_bi_line(data = None):
                         pre_di_start['value'] = di_start['value']
                         di_start['loc'] = ding_di_list[i]['loc']
                         di_start['value'] = ding_di_list[i]['low']
+                        data.ix[di_start['loc'], 'bi_to_be'] = di_start['value']
                         continue
                 elif ding_start['loc'] >= 0:
                     if di_start['loc'] > ding_start['loc']:
@@ -479,9 +484,11 @@ def tag_bi_line(data = None):
                             pre_di_start['value'] = di_start['value']
                             di_start['loc'] = ding_di_list[i]['loc']
                             di_start['value'] = ding_di_list[i]['low']
+                            data.ix[di_start['loc'], 'bi_to_be'] = di_start['value']
                             if pre_di_start['loc'] > 0 \
                             and ding_start['loc'] - pre_di_start['loc'] > 3:
                                 data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
+                                data.ix[pre_di_start['loc'], 'bi_to_be'] = pre_di_start['value']
                             continue
                     elif di_start['loc'] < ding_start['loc']:
                         if ding_di_list[i]['loc'] - ding_start['loc'] > 3 \
@@ -490,9 +497,11 @@ def tag_bi_line(data = None):
                             pre_di_start['value'] = di_start['value']
                             di_start['loc'] = ding_di_list[i]['loc']
                             di_start['value'] = ding_di_list[i]['low']
+                            data.ix[di_start['loc'], 'bi_to_be'] = di_start['value']
                             if pre_di_start['loc'] > 0 \
                             and ding_start['loc'] - pre_di_start['loc'] > 3:
                                 data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
+                                data.ix[pre_di_start['loc'], 'bi_to_be'] = pre_di_start['value']
                             continue
                         elif ding_di_list[i]['loc'] - ding_start['loc'] <= 3:
                             if ding_di_list[i]['low'] < di_start['value']:
@@ -502,9 +511,11 @@ def tag_bi_line(data = None):
                                 ding_start['value'] = pre_ding_start['value']
                                 pre_ding_start['loc'] = -1
                                 pre_ding_start['value'] = 0
+                                data.ix[pre_ding_start['loc'], 'bi_to_be'] = np.NaN
                                 if pre_di_start['loc'] > 0 \
                                 and ding_start['loc'] - pre_di_start['loc'] > 3:
                                     data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
+                                    data.ix[pre_di_start['loc'], 'bi_to_be'] = pre_di_start['value']
                                 continue
     return data
 
