@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
 
 from db_core import dal # Data Access Layer
-from czsc import CZSC
+import czsc
 
 
 class Stock(object):
@@ -79,18 +79,19 @@ class Stock(object):
         and date >= '%s' and date <= '%s'
         and ktype= '%s'""" % (self.code, start, end, ktype)
         data = pd.read_sql_query( sql, dal.engine )
+        data = data.set_index('date')
         return data
 
     def czsc_analysis(self):
-        c = CZSC()
         d = self.get_hist_data()
-        d = d.set_index('date')
-        d1 = c.baohan_process(d)
-        d2 = c.find_possible_ding_di(d1)
-        d3 = c.tag_bi_line(d2)
-        d4 = c.tag_duan_line(d3)
+        d1 = czsc.baohan_process(d)
+        d2 = czsc.find_possible_ding_di(d1)
+        d3 = czsc.tag_bi_line(d2)
+        d4 = czsc.tag_duan_line(d3)
         print(d4)
 
 if __name__ == '__main__':
     s = Stock('sh')
+    s1 = Stock('002675')
+
     s.czsc_analysis()

@@ -241,7 +241,7 @@ def tag_bi_line_mm(data = None):
                 continue
     return data
 
-def tag_bi_line(data = None):
+def tag_bi_line_sure(data = None):
     """给标记顶底之后的数据画笔，采用后出现的顶底优先原则"""
     data = baohan_process(data)
     data = find_possible_ding_di(data)
@@ -294,6 +294,141 @@ def tag_bi_line(data = None):
                             pre_ding_start['value'] = ding_start['value']
                             ding_start['loc'] = ding_di_list[i]['loc']
                             ding_start['value'] = ding_di_list[i]['high']
+                            if pre_ding_start['loc'] > 0 \
+                            and di_start['loc'] - pre_ding_start['loc'] > 3:
+                                data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
+                            continue
+                    elif di_start['loc'] > ding_start['loc']:
+                        if ding_di_list[i]['loc'] - di_start['loc'] > 3 \
+                        and ding_di_list[i]['high'] > di_start['value']:
+                            pre_ding_start['loc'] = ding_start['loc']
+                            pre_ding_start['value'] = ding_start['value']
+                            ding_start['loc'] = ding_di_list[i]['loc']
+                            ding_start['value'] = ding_di_list[i]['high']
+                            if pre_ding_start['loc'] > 0 \
+                            and di_start['loc'] - pre_ding_start['loc'] > 3:
+                                data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
+                            continue
+                        elif ding_di_list[i]['loc'] - di_start['loc'] <= 3:
+                            if ding_di_list[i]['high'] > ding_start['value']:
+                                ding_start['loc'] = ding_di_list[i]['loc']
+                                ding_start['value'] = ding_di_list[i]['high']
+                                di_start['loc'] = pre_di_start['loc']
+                                di_start['value'] = pre_di_start['value']
+                                pre_di_start['loc'] = -1
+                                pre_di_start['value'] = 0
+                                if pre_ding_start['loc'] > 0 \
+                                and di_start['loc'] - pre_ding_start['loc'] > 3:
+                                    data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
+                                continue
+        elif ding_di_list[i]['fenxing'] == 'di':
+            if di_start['loc'] < 0:
+                pre_di_start['loc'] = di_start['loc']
+                pre_di_start['value'] = di_start['value']
+                di_start['loc'] = ding_di_list[i]['loc']
+                di_start['value'] = ding_di_list[i]['low']
+                continue
+            elif di_start['loc'] >= 0:
+                if ding_start['loc'] < 0:
+                    if ding_di_list[i]['low'] < di_start['loc']:
+                        pre_di_start['loc'] = di_start['loc']
+                        pre_di_start['value'] = di_start['value']
+                        di_start['loc'] = ding_di_list[i]['loc']
+                        di_start['value'] = ding_di_list[i]['low']
+                        continue
+                elif ding_start['loc'] >= 0:
+                    if di_start['loc'] > ding_start['loc']:
+                        if ding_di_list[i]['loc'] - ding_start['loc'] > 3 \
+                        and ding_di_list[i]['low'] < di_start['value']:
+                            pre_di_start['loc'] = di_start['loc']
+                            pre_di_start['value'] = di_start['value']
+                            di_start['loc'] = ding_di_list[i]['loc']
+                            di_start['value'] = ding_di_list[i]['low']
+                            if pre_di_start['loc'] > 0 \
+                            and ding_start['loc'] - pre_di_start['loc'] > 3:
+                                data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
+                            continue
+                    elif di_start['loc'] < ding_start['loc']:
+                        if ding_di_list[i]['loc'] - ding_start['loc'] > 3 \
+                        and ding_di_list[i]['low'] < ding_start['value']:
+                            pre_di_start['loc'] = di_start['loc']
+                            pre_di_start['value'] = di_start['value']
+                            di_start['loc'] = ding_di_list[i]['loc']
+                            di_start['value'] = ding_di_list[i]['low']
+                            if pre_di_start['loc'] > 0 \
+                            and ding_start['loc'] - pre_di_start['loc'] > 3:
+                                data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
+                            continue
+                        elif ding_di_list[i]['loc'] - ding_start['loc'] <= 3:
+                            if ding_di_list[i]['low'] < di_start['value']:
+                                di_start['loc'] = ding_di_list[i]['loc']
+                                di_start['value'] = ding_di_list[i]['low']
+                                ding_start['loc'] = pre_ding_start['loc']
+                                ding_start['value'] = pre_ding_start['value']
+                                pre_ding_start['loc'] = -1
+                                pre_ding_start['value'] = 0
+                                if pre_di_start['loc'] > 0 \
+                                and ding_start['loc'] - pre_di_start['loc'] > 3:
+                                    data.ix[pre_di_start['loc'], 'bi_value'] = pre_di_start['value']
+                                continue
+    return data
+
+def tag_bi_line(data = None):
+    """给标记顶底之后的数据画笔，采用后出现的顶底优先原则"""
+    data = baohan_process(data)
+    data = find_possible_ding_di(data)
+    logging.info("tag_bi_line called")
+    # 取出所有顶底标记，方便循环处理
+    ding_di_list = []
+    for i in range(0, len(data)-1):
+        if type(data.ix[i, 'fenxing']) == str:
+            if data.ix[i, 'fenxing'].find('di') != -1:
+                ding_di = {}
+                ding_di['loc'] = i
+                ding_di['fenxing'] = data.ix[i, 'fenxing']
+                ding_di['high'] = data.ix[i, 'high']
+                ding_di['low'] = data.ix[i, 'low']
+                ding_di_list.append(ding_di)
+            else:
+                pass
+
+    # 顶底数不够4个时，不标线
+    if len(ding_di_list) < 4:
+        print("Number of ding_di less than 4, please wait!")
+        exit
+
+    pre_ding_start = {'loc': -1, 'value': 0}
+    pre_di_start = {'loc': -1, 'value': 0}
+    ding_start = {'loc': -1, 'value': 0}
+    di_start = {'loc': -1, 'value': 0}
+    # 走出一个新顶或底就判断一次是否调整笔的结束点
+    for i in range(0, len(ding_di_list) - 1):
+        if ding_di_list[i]['fenxing'] == 'ding':
+            if ding_start['loc'] < 0:
+                pre_ding_start['loc'] = ding_start['loc']
+                pre_ding_start['value'] = ding_start['value']
+                ding_start['loc'] = ding_di_list[i]['loc']
+                ding_start['value'] = ding_di_list[i]['high']
+                data.ix[ding_start['loc'], 'bi'] = ding_start['value']
+                continue
+            elif ding_start['loc'] >= 0:
+                if di_start['loc'] < 0:
+                    if ding_di_list[i]['high'] > ding_start['value']:
+                        pre_ding_start['loc'] = ding_start['loc']
+                        pre_ding_start['value'] = ding_start['value']
+                        ding_start['loc'] = ding_di_list[i]['loc']
+                        ding_start['value'] = ding_di_list[i]['high']
+                        data.ix[ding_start['loc'], 'bi'] = ding_start['value']
+                        continue
+                elif di_start['loc'] >= 0:
+                    if di_start['loc'] < ding_start['loc']:
+                        if ding_di_list[i]['loc'] - di_start['loc'] > 3 \
+                        and ding_di_list[i]['high'] > ding_start['value']:
+                            pre_ding_start['loc'] = ding_start['loc']
+                            pre_ding_start['value'] = ding_start['value']
+                            ding_start['loc'] = ding_di_list[i]['loc']
+                            ding_start['value'] = ding_di_list[i]['high']
+                            data.ix[ding_start['loc'], 'bi'] = ding_start['value']
                             if pre_ding_start['loc'] > 0 \
                             and di_start['loc'] - pre_ding_start['loc'] > 3:
                                 data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
@@ -528,9 +663,7 @@ def plot_data(data = None, single=False):
         # dflen = df.shape[0]
         dflen = len(data)
         if dflen > 35:
-            macd, macdsignal, macdhist = ta.MACD(np.array(data['close']),
-                                                 fastperiod=12, slowperiod=26,
-                                                 signalperiod=9)
+            macd, macdsignal, macdhist = ta.MACD(np.array(data['close']), fastperiod=12, slowperiod=26, signalperiod=9)
             data['macd']=pd.Series(macd,index=data.index)
             data['macdsignal']=pd.Series(macdsignal,index=data.index)
             data['macdhist']=pd.Series(macdhist,index=data.index)
