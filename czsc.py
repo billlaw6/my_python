@@ -640,7 +640,6 @@ def tag_duan_line(data = None, show = False):
         plt.show()
     return  data
 
-
 def plot_data(data = None, single=False):
     """自定义画图"""
     logging.info("plot_data called")
@@ -648,28 +647,30 @@ def plot_data(data = None, single=False):
     plt.rcParams['font.sans-serif'] = ['Liberation Sans'] # 用来正常显示中文标签
     plt.rcParams['axes.unicode_minus'] = False # 用来正常显示负号
 
-    if len(str(data.index[0])) == 10:
-        dates = [datetime.datetime(*time.strptime(str(i), '%Y-%m-%d')[:6]) for i in data.index]
-    else:
-        dates = [datetime.datetime(*time.strptime(str(i), '%Y-%m-%d %H:%M:%S')[:6]) for i in data.index]
+    if 't' not in data.columns:
+        if len(str(data.index[0])) == 10:
+            dates = [datetime.datetime(*time.strptime(str(i), '%Y-%m-%d')[:6]) for i in data.index]
+        else:
+            dates = [datetime.datetime(*time.strptime(str(i), '%Y-%m-%d %H:%M:%S')[:6]) for i in data.index]
+        data['t'] = mdates.date2num(dates)
+
 
     # 多指标同图
     if not single:
-        data['t'] = mdates.date2num(dates)
         adata = data[['t','open','close','high','low','volume']]
         ddata = zip(np.array(adata.t), np.array(adata.open), np.array(adata.close), np.array(adata.high), np.array(adata.low), np.array(adata.volume))
         fig, axes = plt.subplots(3, 1, sharex=True, figsize=(8,6))
 
-        mpf.candlestick_ochl(axes[0], ddata, width=0.6, colorup='r', colordown='g')
-        axes[0].set_title(u'宝鹰股份')
+        #mpf.candlestick_ochl(axes[0], ddata, width=0.6, colorup='r', colordown='g')
+        mpf.candlestick_ochl(axes[0], ddata, colorup='r', colordown='g')
         axes[0].set_ylabel('price')
         axes[0].grid(True)
         axes[0].xaxis_date()
-        axes[0].autoscale_view()
+        # axes[0].autoscale_view()
         axes[1].bar(np.array(adata.t), np.array(adata.volume))
         axes[1].set_ylabel('volume')
         axes[1].grid(True)
-        axes[1].autoscale_view()
+        # axes[1].autoscale_view()
         plt.setp(plt.gca().get_xticklabels(), rotation=30)
         # dflen = df.shape[0]
         dflen = len(data)
@@ -678,40 +679,122 @@ def plot_data(data = None, single=False):
             data['macd']=pd.Series(macd,index=data.index)
             data['macdsignal']=pd.Series(macdsignal,index=data.index)
             data['macdhist']=pd.Series(macdhist,index=data.index)
-            data.set_index('t')
-            data = data.set_index('t')
+            data.set_index('t', drop=False, inplace=True)
             data[['macd','macdsignal','macdhist']].plot(ax=axes[2])
             axes[2].axhline()
     else:
-        data['t'] = mdates.date2num(dates)
         adata = data[['t','open','close','high','low','volume']]
         ddata = zip(np.array(adata.t), np.array(adata.open), np.array(adata.close), np.array(adata.high), np.array(adata.low), np.array(adata.volume))
         fig, ax = plt.subplots(1, 1, figsize=(8,6))
 
-        mpf.candlestick_ochl(ax, ddata, width=0.6, colorup='r', colordown='g')
+        #mpf.candlestick_ochl(ax, ddata, width=0.6, colorup='r', colordown='g')
+        mpf.candlestick_ochl(ax, ddata, colorup='r', colordown='g')
         ax.set_ylabel('price')
         ax.grid(True)
         ax.xaxis_date()
-        ax.autoscale_view()
+        # ax.autoscale_view()
 
     # 有顶底标记时画顶底标记
     if 'fenxing' in data.columns:
         p_data = data[data.fenxing == 'ding']
         b_data = data[data.fenxing == 'di']
-        ax = plt.gca()
-        ax.plot(np.array(p_data.t), np.array(p_data.high), 'v')
-        ax.plot(np.array(b_data.t), np.array(b_data.low), '^')
+        if len(p_data) > 0 and len(b_data) > 0:
+            ax = plt.gca()
+            ax.plot(np.array(p_data.t), np.array(p_data.high), 'v')
+            ax.plot(np.array(b_data.t), np.array(b_data.low), '^')
 
     # 有笔标记时添加笔线条 
     if 'bi_value' in data.columns:
-        bi_data = data[~np.isnan(data.bi_value)]
-        ax.plot(np.array(bi_data.t), np.array(bi_data.bi_value))
+        try:
+            bi_data = data[~np.isnan(data.bi_value)]
+        except TypeError as e:
+            logging.error(e)
+            bi_data = data[data.bi_value != None]
+        if len(bi_data) > 0:
+            ax.plot(np.array(bi_data.t), np.array(bi_data.bi_value))
 
     # 有段标记时添加段线条 
     if 'duan_value' in data.columns:
-        duan_data = data[~np.isnan(data.duan_value)]
+        try:
+            duan_data = data[~np.isnan(data.duan_value)]
+        except TypeError as e:
+            logging.error(e)
+            duan_data = data[data.duan_value != None]
         # print("duan_data %s" % duan_data)
-        ax.plot(np.array(duan_data.t), np.array(duan_data.duan_value), color='b', linewidth=2)
+        if len(duan_data) > 0:
+            ax.plot(np.array(duan_data.t), np.array(duan_data.duan_value), color='b', linewidth=2)
+
+def plot_data2(data = None, single=False):
+    """自定义画图"""
+    logging.info("plot_data called")
+    plt.rcParams['font.family'] = ['sans-serif'] # 用来正常显示中文标签
+    plt.rcParams['font.sans-serif'] = ['Liberation Sans'] # 用来正常显示中文标签
+    plt.rcParams['axes.unicode_minus'] = False # 用来正常显示负号
+
+
+    # 多指标同图
+    if not single:
+        fig, axes = plt.subplots(3, 1, sharex=True, figsize=(8,6))
+
+        mpf.candlestick2_ochl(axes[0], np.array(data.open), np.array(data.close), np.array(data.high), np.array(data.low), np.array(data.volume), colorup='r', colordown='g')
+        axes[0].set_ylabel('price')
+        axes[0].grid(True)
+        axes[0].xaxis_date()
+        # axes[0].autoscale_view()
+        axes[1].bar(np.array(data.t), np.array(data.volume))
+        axes[1].set_ylabel('volume')
+        axes[1].grid(True)
+        # axes[1].autoscale_view()
+        plt.setp(plt.gca().get_xticklabels(), rotation=30)
+        # dflen = df.shape[0]
+        dflen = len(data)
+        if dflen > 35:
+            macd, macdsignal, macdhist = ta.MACD(np.array(data['close']), fastperiod=12, slowperiod=26, signalperiod=9)
+            data['macd']=pd.Series(macd,index=data.index)
+            data['macdsignal']=pd.Series(macdsignal,index=data.index)
+            data['macdhist']=pd.Series(macdhist,index=data.index)
+            data.set_index('t', drop=False, inplace=True)
+            data[['macd','macdsignal','macdhist']].plot(ax=axes[2])
+            axes[2].axhline()
+    else:
+        fig, ax = plt.subplots(1, 1, figsize=(8,6))
+
+        mpf.candlestick2_ochl(ax, np.array(data.open), np.array(data.close), np.array(data.high), np.array(data.low), np.array(data.volume), colorup='r', colordown='g')
+        ax.set_ylabel('price')
+        ax.grid(True)
+        ax.xaxis_date()
+        # ax.autoscale_view()
+
+    # 有顶底标记时画顶底标记
+    if 'fenxing' in data.columns:
+        p_data = data[data.fenxing == 'ding']
+        b_data = data[data.fenxing == 'di']
+        if len(p_data) > 0 and len(b_data) > 0:
+            ax = plt.gca()
+            ax.plot(np.array(p_data.t), np.array(p_data.high), 'v')
+            ax.plot(np.array(b_data.t), np.array(b_data.low), '^')
+
+    # 有笔标记时添加笔线条 
+    if 'bi_value' in data.columns:
+        try:
+            bi_data = data[~np.isnan(data.bi_value)]
+        except TypeError as e:
+            logging.error(e)
+            bi_data = data[data.bi_value != None]
+        if len(bi_data) > 0:
+            ax.plot(np.array(bi_data.t), np.array(bi_data.bi_value))
+
+    # 有段标记时添加段线条 
+    if 'duan_value' in data.columns:
+        try:
+            duan_data = data[~np.isnan(data.duan_value)]
+        except TypeError as e:
+            logging.error(e)
+            duan_data = data[data.duan_value != None]
+        # print("duan_data %s" % duan_data)
+        if len(duan_data) > 0:
+            ax.plot(np.array(duan_data.t), np.array(duan_data.duan_value), color='b', linewidth=2)
+
     plt.show()
 
 

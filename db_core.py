@@ -6,7 +6,7 @@
 # Created Time: Thu 15 Dec 2016 01:48:26 PM CST
 
 from datetime import datetime
-from sqlalchemy import (create_engine, MetaData, Table, Column, DateTime,
+from sqlalchemy import (create_engine, MetaData, Table, Column, DateTime, Boolean,
                        Date, Integer, Numeric, String, Text, Index, ForeignKey)
 
 class DataAccessLayer(object):
@@ -104,6 +104,7 @@ class DataAccessLayer(object):
         Column('code', String(6)),
         Column('ktype', String(6)), # K线周期
         Column('type', String(6)),  # 当前K线与后K线形成up还是down关系
+        Column('delete', Boolean()),  # 当前K线与后K线形成up还是down关系
         Column('fenxing', String(6)), # 顶ding和底di标识
         Column('fx_weight', Numeric(12, 4)), # 分型权重
         Column('bi_to_be', Numeric(12, 4)), # 可能的笔节点的值
