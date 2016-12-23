@@ -37,7 +37,7 @@ class Stock(object):
 
     def _localise_hist_data(self, ktype = None):
         """利用tushare获取数据并存到本地数据库 """
-        sql = """select max(date) as max_date from stock_hist_data
+        sql = """select max(date) as max_date from get_hist_data
                 where code = '%s'
                 and ktype= '%s'""" % (self.code, ktype)
         result = pd.read_sql_query(sql, dal.engine)
@@ -53,7 +53,7 @@ class Stock(object):
         hist_data['code'] = self.code
         hist_data['ktype'] = ktype
         try:
-            hist_data.to_sql('stock_hist_data', dal.engine, if_exists='append', index=True)
+            hist_data.to_sql('get_hist_data', dal.engine, if_exists='append', index=True)
         except Exception as e:
             raise e
 
@@ -74,7 +74,7 @@ class Stock(object):
             start = datetime.datetime.strftime(now - delta, '%Y-%m-%d %H:%M:%S')
         if end is None:
             end = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
-        sql = """select * from stock_hist_data
+        sql = """select * from get_hist_data
         where code= '%s'
         and date >= '%s' and date <= '%s'
         and ktype= '%s'""" % (self.code, start, end, ktype)

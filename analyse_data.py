@@ -63,7 +63,6 @@ def update_czsc_data(code=None, ktype='5'):
     data['t'] = mdates.date2num(dates)
     data = czsc.tag_bi_line(data)
     czsc.plot_data2(data, single=True)
-    print(data)
 
 if __name__ == '__main__':
     update_czsc_data('sh', '5')
