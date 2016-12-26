@@ -13,7 +13,7 @@ class DataAccessLayer(object):
     """ 缠中学缠数据库结构层 """
     connection = None
     engine = None
-    conn_string = None
+    conn_string = 'mysql+pymysql://root:654321@127.0.0.1/stocks?charset=utf8'
     metadata = MetaData()
 
 
@@ -198,7 +198,7 @@ class DataAccessLayer(object):
         Index('ix_new_stocks', 'code', 'issue_date', unique=True),
     )
 
-    def db_init(self, conn_string):
+    def db_init(self, conn_string = None):
         self.engine = create_engine(conn_string or self.conn_string)
         self.metadata.create_all(self.engine)
         self.connection = self.engine.connect()

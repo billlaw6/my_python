@@ -8,12 +8,14 @@
 import tushare as ts
 import datetime
 import pandas as pd
-from sqlalchemy import create_engine, select, insert, update
+from sqlalchemy import create_engine, select, insert, update, and_
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, bindparam
 
 from db_core import dal # Data Access Layer
 import czsc
+from db_core import dal
+dal.db_init('mysql+pymysql://root:654321@127.0.0.1/stocks?charset=utf8')
 
 
 class Stock(object):
@@ -79,16 +81,37 @@ class Stock(object):
         and date >= '%s' and date <= '%s'
         and ktype= '%s'""" % (self.code, start, end, ktype)
         data = pd.read_sql_query( sql, dal.engine )
-        data = data.set_index('date')
+        data.set_index('date', drop=False, inplace=True)
         return data
 
     def czsc_analysis(self):
-        d = self.get_hist_data()
+        d = self.get_hist_data(ktype='D')
+        d['date'] = d.index
         d1 = czsc.baohan_process(d)
         d2 = czsc.find_possible_ding_di(d1)
         d3 = czsc.tag_bi_line(d2)
-        d4 = czsc.tag_duan_line(d3)
-        print(d4)
+        #d3 = d3[pd.isnull(d3.fenxing)]
+        d3 = d3[pd.notnull(d3.fenxing)]
+        if len(d3) > 0:
+            stmt = dal.get_hist_data.update().\
+                where(
+                    and_(dal.get_hist_data.c.code == bindparam('s_code'),
+                         dal.get_hist_data.c.date == bindparam('p_date'),
+                         dal.get_hist_data.c.ktype == bindparam('_ktype')
+                        )
+                ).\
+                values(fenxing = bindparam('fenxing'))
+            u_data = []
+            tmp = {}
+            for i in range(len(d3)):
+                tmp['s_code'] = d3.ix[i, 'code']
+                tmp['p_date'] = str(d3.ix[i, 'date'])
+                tmp['_ktype'] = str(d3.ix[i, 'ktype'])
+                tmp['fenxing'] = d3.ix[i, 'fenxing']
+                tmp['bi_value'] = str(d3.ix[i, 'bi_value'])
+                u_data.append(tmp)
+            print(u_data)
+            dal.connection.execute(stmt, u_data)
 
 if __name__ == '__main__':
     s = Stock('sh')
