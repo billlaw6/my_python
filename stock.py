@@ -5,29 +5,50 @@
 # mail: bill_law6@163.com
 # Created Time: Wed 14 Dec 2016 07:16:55 PM CST
 
+import logging
+import logging.config
+import json
+
 import tushare as ts
 import datetime
 import pandas as pd
-from sqlalchemy import create_engine, select, insert, update, and_
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import func, bindparam
+from sqlalchemy import and_
+from sqlalchemy.sql import bindparam
 
-from db_core import dal # Data Access Layer
 import czsc
-from db_core import dal
+from db_core import dal # Data Access Layer
 dal.db_init('mysql+pymysql://root:654321@127.0.0.1/stocks?charset=utf8')
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+# handler = logging.FileHandler('hello.log')
+# handler.setFormatter(logging.INFO)
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# handler.setFormatter(formatter)
+# logger.addHandler(handler)
+
+def setup_logging(
+    default_path="logging.json",
+    default_level=logging.INFO,
+    env_key="LOG_CFG"
+):
+    """ Setup logging configuration """
+    path = default_path
+    value = os.getenv(env_key, None)
+    if value:
+        path = value
+    if os.path.exists(path):
+        with open(path, 'rt') as f:
+            config = json.load(f)
+        logging.config.dictConfig(config)
+    else:
+        logging.basicConfig(level=default_level)
 
 class Stock(object):
     """获取股票数据、分析并将结果存于本地数据库"""
     code = None
     data_layer = None
     basic_info = None
-    hist_data_5 = None
-    hist_data_30 = None
-    hist_data_D = None
-    hist_data_W = None
-    hist_data_M = None
 
     def __init__(self, code = None):
         self.code = code
@@ -84,37 +105,82 @@ class Stock(object):
         data.set_index('date', drop=False, inplace=True)
         return data
 
-    def czsc_analysis(self):
-        d = self.get_hist_data(ktype='D')
-        d['date'] = d.index
-        d1 = czsc.baohan_process(d)
+    def add_czsc_data(self, data):
+        data['date'] = data.index
+        #
+        d1 = czsc.baohan_process(data)
+        d1 = d1[pd.notnull(d1.type)]
+        if len(d1) > 0:
+            stmt = dal.get_hist_data.update().\
+                where(
+                    and_(dal.get_hist_data.c.code == bindparam('s_code'),
+                         dal.get_hist_data.c.date == bindparam('p_date'),
+                         dal.get_hist_data.c.ktype == bindparam('s_ktype')
+                        )
+                ).\
+                values(type= bindparam('_type'))
+            u_data = []
+            tmp = {}
+            for i in range(len(d1)):
+                tmp['s_code'] = d1.ix[i, 'code']
+                tmp['p_date'] = str(d1.ix[i, 'date'])
+                tmp['s_ktype'] = str(d1.ix[i, 'ktype'])
+                tmp['_type'] = str(d1.ix[i, 'type'])
+                u_data.append(tmp)
+                tmp = {}
+            us = dal.connection.execute(stmt, u_data)
+            logging.info("%s row's type updated" % us.rowcount)
+
+        #
         d2 = czsc.find_possible_ding_di(d1)
+        d2 = d2[pd.notnull(d2.fenxing)]
+        if len(d2) > 0:
+            stmt = dal.get_hist_data.update().\
+                where(
+                    and_(dal.get_hist_data.c.code == bindparam('s_code'),
+                         dal.get_hist_data.c.date == bindparam('p_date'),
+                         dal.get_hist_data.c.ktype == bindparam('s_ktype')
+                        )
+                ).\
+                values( fenxing = bindparam('_fenxing'))
+            u_data = []
+            tmp = {}
+            for i in range(len(d2)):
+                tmp['s_code'] = d2.ix[i, 'code']
+                tmp['p_date'] = str(d2.ix[i, 'date'])
+                tmp['s_ktype'] = str(d2.ix[i, 'ktype'])
+                tmp['_fenxing'] = str(d2.ix[i, 'fenxing'])
+                u_data.append(tmp)
+                tmp = {}
+            us = dal.connection.execute(stmt, u_data)
+            logging.info("%s row's fenxing updated" % us.rowcount)
+
         d3 = czsc.tag_bi_line(d2)
-        #d3 = d3[pd.isnull(d3.fenxing)]
-        d3 = d3[pd.notnull(d3.fenxing)]
+        d3 = d3[(d3.bi_value>0)]
         if len(d3) > 0:
             stmt = dal.get_hist_data.update().\
                 where(
                     and_(dal.get_hist_data.c.code == bindparam('s_code'),
                          dal.get_hist_data.c.date == bindparam('p_date'),
-                         dal.get_hist_data.c.ktype == bindparam('_ktype')
+                         dal.get_hist_data.c.ktype == bindparam('s_ktype')
                         )
                 ).\
-                values(fenxing = bindparam('fenxing'))
+                values( bi_value= bindparam('_bi_value'))
             u_data = []
             tmp = {}
             for i in range(len(d3)):
                 tmp['s_code'] = d3.ix[i, 'code']
                 tmp['p_date'] = str(d3.ix[i, 'date'])
-                tmp['_ktype'] = str(d3.ix[i, 'ktype'])
-                tmp['fenxing'] = d3.ix[i, 'fenxing']
-                tmp['bi_value'] = str(d3.ix[i, 'bi_value'])
+                tmp['s_ktype'] = str(d3.ix[i, 'ktype'])
+                tmp['_bi_value'] = str(d3.ix[i, 'bi_value'])
                 u_data.append(tmp)
-            print(u_data)
-            dal.connection.execute(stmt, u_data)
+                tmp = {}
+            us = dal.connection.execute(stmt, u_data)
+            logging.info("%s row's bi_value updated" % us.rowcount)
+
 
 if __name__ == '__main__':
     s = Stock('sh')
-    s1 = Stock('002675')
-
-    s.czsc_analysis()
+    d = s.get_hist_data(start='2016-01-01', ktype='5')
+    s.add_czsc_data(d)
+    czsc.plot_data(d, single=True, ktype='5')

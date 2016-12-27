@@ -114,18 +114,18 @@ def find_possible_ding_di(data = None):
     logging.info("find_possible_ding_di called")
 
     for i in range(2, len(data)-2):
-        # and data.ix[i, 'high'] > data.ix[i + 2, 'high'] \
         if data.ix[i, 'high'] > data.ix[i - 1, 'high'] \
         and data.ix[i, 'high'] > data.ix[i - 2, 'high'] \
         and data.ix[i, 'high'] > data.ix[i + 1, 'high'] \
+        and data.ix[i, 'high'] > data.ix[i + 2, 'high'] \
         and data.ix[i, 'low'] > data.ix[i - 1, 'low'] \
         and data.ix[i, 'low'] > data.ix[i + 1, 'low']:
             data.ix[i, 'fenxing'] = 'ding'
-        #and data.ix[i, 'low'] < data.ix[i + 2, 'low'] \
         elif data.ix[i, 'high'] < data.ix[i - 1, 'high'] \
         and data.ix[i, 'high'] < data.ix[i + 1, 'high'] \
         and data.ix[i, 'low'] < data.ix[i - 1, 'low'] \
         and data.ix[i, 'low'] < data.ix[i - 2, 'low'] \
+        and data.ix[i, 'low'] < data.ix[i + 2, 'low'] \
         and data.ix[i, 'low'] < data.ix[i + 1, 'low']:
             data.ix[i, 'fenxing'] = 'di'
         else:
@@ -640,7 +640,7 @@ def tag_duan_line(data = None, show = False):
         plt.show()
     return  data
 
-def plot_data(data = None, single=False, ktype='None'):
+def plot_data(data = None, single=False, ktype='D'):
     """自定义画图"""
     logging.info("plot_data called")
     plt.rcParams['font.family'] = ['sans-serif'] # 用来正常显示中文标签
@@ -701,7 +701,7 @@ def plot_data(data = None, single=False, ktype='None'):
     if 'fenxing' in data.columns:
         p_data = data[data.fenxing == 'ding']
         b_data = data[data.fenxing == 'di']
-        if len(p_data) > 0 and len(b_data) > 0:
+        if len(p_data) > 0 or len(b_data) > 0:
             ax = plt.gca()
             ax.plot(np.array(p_data.t), np.array(p_data.high), 'v')
             ax.plot(np.array(b_data.t), np.array(b_data.low), '^')
@@ -711,7 +711,7 @@ def plot_data(data = None, single=False, ktype='None'):
         try:
             bi_data = data[~np.isnan(data.bi_value)]
         except TypeError as e:
-            logging.error(e)
+            logging.warning(e)
             bi_data = data[data.bi_value > 0]
         if len(bi_data) > 0:
             ax.plot(np.array(bi_data.t), np.array(bi_data.bi_value), linewidth=1.5)
