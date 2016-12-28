@@ -8,6 +8,7 @@
 import logging
 import logging.config
 import json
+import os
 
 import tushare as ts
 import datetime
@@ -54,8 +55,6 @@ class Stock(object):
         self.code = code
         if self.code is None:
             self.code = 'sh'
-
-        dal.db_init('mysql+pymysql://root:654321@127.0.0.1/stocks?charset=utf8')
         self._prepare_hist_data()
 
     def _localise_hist_data(self, ktype = None):
@@ -80,6 +79,13 @@ class Stock(object):
         except Exception as e:
             raise e
 
+        h_data = ts.get_h_data(code = self.code)
+        h_data['code'] = self.code
+        try:
+            h_data.to_sql('get_h_data', dal.engine, if_exists='append', index=True)
+        except Exception as e:
+            raise e
+
     def _prepare_hist_data(self, ktypes = ['5', '30', 'D']):
         """利用tushare获取数据并存到本地数据库 """
         for ktype in ktypes:
@@ -97,13 +103,19 @@ class Stock(object):
             start = datetime.datetime.strftime(now - delta, '%Y-%m-%d %H:%M:%S')
         if end is None:
             end = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
-        sql = """select * from get_hist_data
-        where code= '%s'
-        and date >= '%s' and date <= '%s'
-        and ktype= '%s'""" % (self.code, start, end, ktype)
+        if ktype=='D':
+            sql = """select * from get_h_data
+            where code= '%s'
+            and date >= '%s' and date <= '%s'""" % (self.code, start, end)
+        else:
+            sql = """select * from get_hist_data
+            where code= '%s'
+            and date >= '%s' and date <= '%s'
+            and ktype= '%s'""" % (self.code, start, end, ktype)
         data = pd.read_sql_query( sql, dal.engine )
         data.set_index('date', drop=False, inplace=True)
         return data
+
 
     def add_czsc_data(self, data):
         data['date'] = data.index

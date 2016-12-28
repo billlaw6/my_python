@@ -5,17 +5,15 @@
 # mail: bill_law6@163.com
 # Created Time: Mon 19 Dec 2016 09:10:17 PM CST
 
-from sqlalchemy.sql import select
+import stock_select as ss
+import stock_localize_data as sld
 
-from db import dal
+stock_list = ss.basic_select()
+sld.basic_data()
+sld.h_data(stock_list)
+sld.hist_data(stock_list)
 
-def get_stock_pool( ):
-    """ 获取需要分析的股票列表 """
-    columns= [dal.stock_hist_data.c.code, dal.stock_hist_data.c.close]
 
-    selected_stocks = select(columns)
-
-    return dal.connection.execute(selected_stocks).fetchall()
 
 
 

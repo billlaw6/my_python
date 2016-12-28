@@ -6,21 +6,13 @@
 # Created Time: Mon 07 Nov 2016 10:48:52 AM CST
 
 import tushare as ts
-import time
 import datetime
-from pylab import *
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib.finance as mpf
-import numpy as np
 import pandas as pd
-import sqlalchemy
-from sqlalchemy import create_engine
-import stock_czsc_tools as sct
+from sqlalchemy import select, and_
 
-engine_mysql = create_engine('mysql+pymysql://root:654321@127.0.0.1/stocks?charset=utf8')
-engine_sqlite = create_engine('sqlite:////test_stocks.db3')
+from db_core import dal
+dal.db_init()
+
 
 def stock_select_tiantian(totals_limit=15000, reservedPerShare_limit=2, esp_limit=0.5, bvps_limit=0.3):
     """
@@ -32,8 +24,7 @@ def stock_select_tiantian(totals_limit=15000, reservedPerShare_limit=2, esp_limi
     bvps 每股尽资产
     esp 每股收益
     """
-    #stocks = ts.get_stock_basics()
-    stocks = pd.read_sql_table('stock_basics', engine)
+    stocks = pd.read_sql_table('get_stock_basics', dal.engine)
     return stocks[(stocks.totals < totals_limit) & (stocks.esp > esp_limit) & (stocks.reservedPerShare > reservedPerShare_limit) & (stocks.bvps > bvps_limit)]
 
 def limitup_count_filter(stocks=None, duration=30, count_limit=3, continuous=True):
@@ -47,7 +38,7 @@ def limitup_count_filter(stocks=None, duration=30, count_limit=3, continuous=Tru
     for stock in stocks.index:
         print("Checking stock %s" % stock)
         count = 0
-        hist = pd.read_sql_table('stock_basics', engine)
+        hist = pd.read_sql_table('get_stock_basics', dal.engine)
         if hist is None:
             hist = ts.get_hist_data(stock, start_str).sort_index()
         # hist = ts.get_hist_data('603738', start_str).sort_index()
@@ -68,7 +59,7 @@ def limitup_count_filter(stocks=None, duration=30, count_limit=3, continuous=Tru
                 break
     return stocks[stocks.limit_count == ('enough %s' % count_limit)]
 
-def fltp_slht_filter(stocks, duration=30):
+def fltp_slht_select(stocks, duration=30):
     d_delta = datetime.timedelta(days=duration)
     now = datetime.datetime.now()
     start = now - d_delta
@@ -79,26 +70,31 @@ def fltp_slht_filter(stocks, duration=30):
     import stock_get_data as sgd
     sgd.get_trade_data(stocks)
 
-def czsc_select(data):
-    stocks = ts.get_stock_basics()
-    basic_stock_list = stocks[(stocks.totals < totals_limit) & (stocks.esp > esp_limit) & (stocks.reservedPerShare > reservedPerShare_limit) & (stocks.bvps > bvps_limit)]
-    today_list = ts.get_today_all()
-    test_data.to_sql('sh_test_data', con, if_exists='replace', index=True, dtype={'date': 'CHAR'})
-    test_data.to_sql('sh_test_data', engine, if_exists='replace', index=True, dtype={'date': sqlalchemy.types.CHAR(20)})
-                       
+def basic_select():
+    s = select([dal.get_stock_basics, dal.get_today_all]).\
+            where( and_((dal.get_stock_basics.c.code == dal.get_today_all.c.code),
+                    (dal.get_today_all.c.turnoverratio > 1.5),
+                    (dal.get_today_all.c.turnoverratio < 4),
+                    # (dal.get_today_all.c.per > 35),
+                    # (dal.get_today_all.c.per < 65),
+                    # (dal.get_stock_basics.c.pb > 3),
+                    # (dal.get_stock_basics.c.pb < 8),
+                    (dal.get_stock_basics.c.reservedPerShare > 0),
+                    (dal.get_stock_basics.c.esp > 0.01),
+                    (dal.get_stock_basics.c.profit > 0),
+                    # (dal.get_stock_basics.c.totals > 1.4),
+                    (dal.get_stock_basics.c.totals < 8)
+                    ))
+    rs = dal.connection.execute(s)
+    stock_list = []
+    for row in rs:
+        print("%s, %s" % (row[1], row[2]))
+        print("%s stock seleted" % rs.rowcount)
+        stock_list.append(row[1])
+    return stock_list
 
 def main():
-    #selected_stocks = stock_select_tiantian()
-    ## Tiantian xuangufa
-    ## result = limitup_count_filter(selected_stocks, duration=180, count_limit=5)
-    #result = limitup_count_filter(selected_stocks)
-    #result[result.industry.str.contains(u'医')]
-    #print(result)
-    data = ts.get_h_data('002675')
-    data = sct.baohan_process(data)
-    data = sct.find_possible_ding_di(data)
-    data = sct.tag_bi_line(data)
-    sct.plot_data(data, single=True)
+    basic_select()
 
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@
 
 from datetime import datetime
 from sqlalchemy import (create_engine, MetaData, Table, Column, DateTime, Boolean,
-                       Date, Integer, Numeric, String, Text, Index, ForeignKey)
+                       Date, Integer, Numeric, String, Text, Index)
 
 class DataAccessLayer(object):
     """ 缠中学缠数据库结构层 """
@@ -59,12 +59,12 @@ class DataAccessLayer(object):
         Column('gpr', Numeric(12, 4)), # 毛利率(%)
         Column('npr', Numeric(12, 4)), # 净利润率(%)
         Column('holders', Integer()), # 股东人数
-        Column('created_on', DateTime(), default = datetime.now), # 获取时间
-        Index('ix_get_stock_basics', 'code', 'industry', unique=True),
+        Column('date', DateTime(), default = datetime.now), # 获取时间
+        Index('ix_get_stock_basics', 'code', 'date', unique=True),
     )
 
     get_today_all = Table('get_today_all', metadata,
-        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
+        Column('code', String(6), index=True), # 代码
         Column('name', String(50), index=True), # 名称
         Column('changepercent', Numeric(12, 4)), # 涨跌幅
         Column('trade', Numeric(12, 4)), # 现价
@@ -73,12 +73,12 @@ class DataAccessLayer(object):
         Column('low', Numeric(12, 4)), # 最低价
         Column('settlement', Numeric(12, 4)), # 昨日收盘价
         Column('volume', Numeric(20, 4)), # 成交量
-        Column('turnoverratio', Numeric(12, 4)), # 换手率
-        Column('amount', Numeric(12, 4)), # 成交量
+        Column('turnoverratio', Numeric(20, 6)), # 换手率
+        Column('amount', Numeric(20, 4)), # 成交量
         Column('per', Numeric(12, 4)), # 市盈率
         Column('pb', Numeric(12, 4)), # 市净率
-        Column('mktcap', Numeric(12, 4)), # 总市值
-        Column('nmc', Numeric(12, 4)), # 流通市值
+        Column('mktcap', Numeric(20, 6)), # 总市值
+        Column('nmc', Numeric(20, 6)), # 流通市值
         Column('date', Date(), default = datetime.now), # 获取时间
         Index('ix_today_all', 'code', 'date', unique=True),
      )
@@ -113,9 +113,39 @@ class DataAccessLayer(object):
         Index('ix_get_hist_data', 'code', 'date', 'ktype', unique=True),
     )
 
+    # qfq
+    get_h_data = Table('get_h_data', metadata,
+        Column('id', Integer(), primary_key=True),
+        Column('date', DateTime(), nullable = False),
+        Column('open',Numeric(12, 4)),
+        Column('high', Numeric(12, 4)),
+        Column('close', Numeric(12, 4)),
+        Column('low', Numeric(12, 4)),
+        Column('volume', Numeric(20, 4)),
+        Column('amount', Numeric(20, 4)),
+        Column('price_change', Numeric(12, 4)),
+        Column('p_change', Numeric(12, 4)),
+        Column('ma5', Numeric(12, 4)),
+        Column('ma10', Numeric(12, 4)),
+        Column('ma20', Numeric(12, 4)),
+        Column('v_ma5', Numeric(20, 4)),
+        Column('v_ma10', Numeric(20, 4)),
+        Column('v_ma20', Numeric(20, 4)),
+        Column('code', String(6)),
+        Column('ktype', String(6), default='D'), # K线周期
+        Column('type', String(6)),  # 当前K线与后K线形成up还是down关系
+        Column('delete', Boolean()),  # 当前K线与后K线形成up还是down关系
+        Column('fenxing', String(6)), # 顶ding和底di标识
+        Column('fx_weight', Numeric(12, 4)), # 分型权重
+        Column('bi_to_be', Numeric(12, 4)), # 可能的笔节点的值
+        Column('bi_value', Numeric(12, 4)), # 确定的笔节点的值
+        Column('duan_value', Numeric(12, 4)), # 段节点的值
+        Index('ix_get_hist_data', 'code', 'date', 'ktype', unique=True),
+    )
+
     # 业绩报告（主表）
     get_report_data = Table('get_report_data', metadata,
-        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
+        Column('code', String(6), index=True), # 代码
         Column('name', String(50), index=True), # 股票名称
         Column('esp', Numeric(12, 4)), # 每股收益
         Column('esp_yoy', Numeric(12, 4)), # 每股收益同比(%)
@@ -134,7 +164,7 @@ class DataAccessLayer(object):
 
     # 分配预案
     profit_data = Table('profit_data', metadata,
-        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
+        Column('code', String(6), index=True), # 代码
         Column('name', String(50), index=True), # 股票名称
         Column('year', Integer()), # 分配年份
         Column('report_date', Date( )), # 公布日期
@@ -146,7 +176,7 @@ class DataAccessLayer(object):
 
     # 业绩预告
     forecast_data = Table('forecast_data', metadata,
-        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
+        Column('code', String(6), index=True), # 代码
         Column('name', String(50), index=True), # 股票名称
         Column('type', String(6)),  # 业绩变动类型【预增、预亏等】
         Column('report_date', Date( )), # 公布日期
@@ -158,7 +188,7 @@ class DataAccessLayer(object):
 
     # 限售股解禁
     xsg_data = Table('xsg_data', metadata,
-        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
+        Column('code', String(6), index=True), # 代码
         Column('name', String(50), index=True), # 股票名称
         Column('date', Date()), # 解禁日期
         Column('count', Integer()), # 解禁数量（万股）
@@ -169,7 +199,7 @@ class DataAccessLayer(object):
 
     # 基金持股
     fund_holdings = Table('fund_holdings', metadata,
-        Column('code', String(6), ForeignKey('get_stock_basics.code')), # 代码
+        Column('code', String(6), index=True), # 代码
         Column('name', String(50), index=True), # 股票名称
         Column('date', Date()), # 报告日期
         Column('nums', Integer()), # 基金家数
@@ -204,6 +234,9 @@ class DataAccessLayer(object):
         self.connection = self.engine.connect()
 
 dal = DataAccessLayer()
+
+if __name__=='__main__':
+    dal = DataAccessLayer()
 
 
 
