@@ -409,7 +409,6 @@ def tag_bi_line(data = None):
                 pre_ding_start['value'] = ding_start['value']
                 ding_start['loc'] = ding_di_list[i]['loc']
                 ding_start['value'] = ding_di_list[i]['high']
-                data.ix[ding_start['loc'], 'bi_to_be'] = ding_start['value']
                 continue
             elif ding_start['loc'] >= 0:
                 if di_start['loc'] < 0:
@@ -418,7 +417,6 @@ def tag_bi_line(data = None):
                         pre_ding_start['value'] = ding_start['value']
                         ding_start['loc'] = ding_di_list[i]['loc']
                         ding_start['value'] = ding_di_list[i]['high']
-                        data.ix[ding_start['loc'], 'bi_to_be'] = ding_start['value']
                         continue
                 elif di_start['loc'] >= 0:
                     if di_start['loc'] < ding_start['loc']:
@@ -428,7 +426,6 @@ def tag_bi_line(data = None):
                             pre_ding_start['value'] = ding_start['value']
                             ding_start['loc'] = ding_di_list[i]['loc']
                             ding_start['value'] = ding_di_list[i]['high']
-                            data.ix[ding_start['loc'], 'bi_to_be'] = ding_start['value']
                             if pre_ding_start['loc'] > 0 \
                             and di_start['loc'] - pre_ding_start['loc'] > 3:
                                 data.ix[pre_ding_start['loc'], 'bi_value'] = pre_ding_start['value']
@@ -474,7 +471,6 @@ def tag_bi_line(data = None):
                         pre_di_start['value'] = di_start['value']
                         di_start['loc'] = ding_di_list[i]['loc']
                         di_start['value'] = ding_di_list[i]['low']
-                        data.ix[di_start['loc'], 'bi_to_be'] = di_start['value']
                         continue
                 elif ding_start['loc'] >= 0:
                     if di_start['loc'] > ding_start['loc']:
@@ -542,7 +538,7 @@ def tag_duan_line(data = None, show = False):
                 else:
                     pass
     else:
-        logging.error('No bi_value attribute in data')
+        logging.warning('No bi_value attribute in data')
 
     shang = {}
     shang_list = []
@@ -686,6 +682,7 @@ def plot_data(data = None, single=False, ktype='D'):
             data.set_index('t', drop=False, inplace=True)
             data[['macd','macdsignal','macdhist']].plot(ax=axes[2])
             axes[2].axhline()
+        k_ax = axes[0]
     else:
         adata = data[['t','open','close','high','low','volume']]
         ddata = zip(np.array(adata.t), np.array(adata.open), np.array(adata.close), np.array(adata.high), np.array(adata.low), np.array(adata.volume))
@@ -696,13 +693,14 @@ def plot_data(data = None, single=False, ktype='D'):
         ax.grid(True)
         ax.xaxis_date()
         ax.autoscale_view()
+        k_ax = ax
 
     # 有顶底标记时画顶底标记
     if 'fenxing' in data.columns:
         p_data = data[data.fenxing == 'ding']
         b_data = data[data.fenxing == 'di']
         if len(p_data) > 0 or len(b_data) > 0:
-            ax = plt.gca()
+            ax = k_ax
             ax.plot(np.array(p_data.t), np.array(p_data.high), 'v')
             ax.plot(np.array(b_data.t), np.array(b_data.low), '^')
 
@@ -716,31 +714,30 @@ def plot_data(data = None, single=False, ktype='D'):
         if len(bi_data) > 0:
             ax.plot(np.array(bi_data.t), np.array(bi_data.bi_value), linewidth=1.5)
 
-    # # 有笔标记时添加笔线条 
-    # if 'bi_to_be' in data.columns:
-        # try:
-            # bi_data = data[~np.isnan(data.bi_to_be)]
-        # except TypeError as e:
-            # logging.error(e)
-            # bi_data = data[data.bi_to_be > 0]
-        # if len(bi_data) > 0:
-            # ax.plot(np.array(bi_data.t), np.array(bi_data.bi_to_be))
-            # ax.plot(np.array(bi_data.t), np.array(bi_data.bi_to_be), color='y')
+    # 有笔标记时添加笔线条 
+    if 'bi_to_be' in data.columns:
+        try:
+            bi_data = data[~np.isnan(data.bi_to_be)]
+        except TypeError as e:
+            logging.warning(e)
+            bi_data = data[data.bi_to_be > 0]
+        if len(bi_data) > 0:
+            ax.plot(np.array(bi_data.t), np.array(bi_data.bi_to_be))
+            ax.plot(np.array(bi_data.t), np.array(bi_data.bi_to_be), color='y')
 
     # 有段标记时添加段线条 
     if 'duan_value' in data.columns:
         try:
             duan_data = data[~np.isnan(data.duan_value)]
         except TypeError as e:
-            logging.error(e)
+            logging.warning(e)
             duan_data = data[data.duan_value > 0]
         # print("duan_data %s" % duan_data)
         if len(duan_data) > 0:
             ax.plot(np.array(duan_data.t), np.array(duan_data.duan_value), color='b', linewidth=2)
     plt.show()
 
-
-def plot_data2(data = None, single=False, ktype='None'):
+def plot_data2(data = None, single=False, ktype='D'):
     """自定义画图"""
     logging.info("plot_data called")
     plt.rcParams['font.family'] = ['sans-serif'] # 用来正常显示中文标签
@@ -802,32 +799,128 @@ def plot_data2(data = None, single=False, ktype='None'):
         try:
             bi_data = data[~np.isnan(data.bi_value)]
         except TypeError as e:
-            logging.error(e)
+            logging.warning(e)
             bi_data = data[data.bi_value > 0]
         if len(bi_data) > 0:
             ax.plot(np.array(bi_data.x_axis), np.array(bi_data.bi_value), linewidth=1.5)
 
-    # # 有笔标记时添加笔线条 
-    # if 'bi_to_be' in data.columns:
-        # try:
-            # bi_data = data[~np.isnan(data.bi_to_be)]
-        # except TypeError as e:
-            # logging.error(e)
-            # bi_data = data[data.bi_to_be > 0]
-        # if len(bi_data) > 0:
-            # ax.plot(np.array(bi_data.x_axis), np.array(bi_data.bi_to_be))
-            # ax.plot(np.array(bi_data.x_axis), np.array(bi_data.bi_to_be), color='y')
+    # 有笔标记时添加笔线条 
+    if 'bi_to_be' in data.columns:
+        try:
+            bi_data = data[~np.isnan(data.bi_to_be)]
+        except TypeError as e:
+            logging.warning(e)
+            bi_data = data[data.bi_to_be > 0]
+        if len(bi_data) > 0:
+            ax.plot(np.array(bi_data.x_axis), np.array(bi_data.bi_to_be))
+            ax.plot(np.array(bi_data.x_axis), np.array(bi_data.bi_to_be), color='y')
 
     # 有段标记时添加段线条 
     if 'duan_value' in data.columns:
         try:
             duan_data = data[~np.isnan(data.duan_value)]
         except TypeError as e:
-            logging.error(e)
+            logging.warning(e)
             duan_data = data[data.duan_value > 0]
         # print("duan_data %s" % duan_data)
         if len(duan_data) > 0:
             ax.plot(np.array(duan_data.x_axis), np.array(duan_data.duan_value), color='b', linewidth=2)
+
+    plt.show()
+
+def plot_data3(data = None, single=False, ktype='D'):
+    """自定义画图"""
+    logging.info("plot_data3 called")
+    plt.rcParams['font.family'] = ['sans-serif'] # 用来正常显示中文标签
+    plt.rcParams['font.sans-serif'] = ['Liberation Sans'] # 用来正常显示中文标签
+    plt.rcParams['axes.unicode_minus'] = False # 用来正常显示负号
+    if ktype=='5':
+        k_width = 0.002
+    elif ktype=='30':
+        k_width = 0.01
+    elif ktype in ('D', 'W', 'M'):
+        k_width = 0.6
+
+    if 't' not in data.columns:
+        if len(str(data.index[0])) == 10:
+            dates = [datetime.datetime(*time.strptime(str(i), '%Y-%m-%d')[:6]) for i in data.index]
+        else:
+            dates = [datetime.datetime(*time.strptime(str(i), '%Y-%m-%d %H:%M:%S')[:6]) for i in data.index]
+        data['t'] = mdates.date2num(dates)
+
+
+    # 多指标同图
+    if not single:
+        adata = data[['t','open','close','high','low','volume']]
+        ddata = zip(np.array(adata.t), np.array(adata.open), np.array(adata.close), np.array(adata.high), np.array(adata.low), np.array(adata.volume))
+        fig, axes = plt.subplots(3, 1, sharex=True, figsize=(8,6))
+
+        mpf.candlestick_ochl(axes[0], ddata, width=k_width, colorup='r', colordown='g')
+        axes[0].set_ylabel('price')
+        axes[0].grid(True)
+        axes[0].xaxis_date()
+        axes[0].autoscale_view()
+        axes[1].bar(np.array(adata.t), np.array(adata.volume))
+        axes[1].set_ylabel('volume')
+        axes[1].grid(True)
+        axes[1].autoscale_view()
+        plt.setp(plt.gca().get_xticklabels(), rotation=30)
+        data.set_index('t', drop=False, inplace=True)
+        data[['diff','dea','macd']].plot(ax=axes[2])
+        axes[2].axhline()
+        k_ax = axes[0]
+    else:
+        adata = data[['t','open','close','high','low','volume']]
+        ddata = zip(np.array(adata.t), np.array(adata.open), np.array(adata.close), np.array(adata.high), np.array(adata.low), np.array(adata.volume))
+        fig, ax = plt.subplots(1, 1, figsize=(8,6))
+
+        mpf.candlestick_ochl(ax, ddata, width=k_width, colorup='r', colordown='g')
+        ax.set_ylabel('price')
+        ax.grid(True)
+        ax.xaxis_date()
+        ax.autoscale_view()
+        k_ax = ax
+
+    # 有顶底标记时画顶底标记
+    if 'fenxing' in data.columns:
+        p_data = data[data.fenxing == 'ding']
+        b_data = data[data.fenxing == 'di']
+        if len(p_data) > 0 or len(b_data) > 0:
+            ax = k_ax
+            ax.plot(np.array(p_data.t), np.array(p_data.high), 'v')
+            ax.plot(np.array(b_data.t), np.array(b_data.low), '^')
+
+    # 有笔标记时添加笔线条 
+    if 'bi_value' in data.columns:
+        try:
+            bi_data = data[~np.isnan(data.bi_value)]
+        except TypeError as e:
+            logging.warning(e)
+            bi_data = data[data.bi_value > 0]
+        if len(bi_data) > 0:
+            ax.plot(np.array(bi_data.t), np.array(bi_data.bi_value), linewidth=1.5)
+
+    # 有笔标记时添加笔线条 
+    if 'bi_to_be' in data.columns:
+        try:
+            bi_data = data[~np.isnan(data.bi_to_be)]
+        except TypeError as e:
+            logging.warning(e)
+            bi_data = data[data.bi_to_be > 0]
+        if len(bi_data) > 0:
+            ax.plot(np.array(bi_data.t), np.array(bi_data.bi_to_be))
+            ax.plot(np.array(bi_data.t), np.array(bi_data.bi_to_be), color='y')
+
+    # 有段标记时添加段线条 
+    if 'duan_value' in data.columns:
+        try:
+            duan_data = data[~np.isnan(data.duan_value)]
+        except TypeError as e:
+            logging.warning(e)
+            duan_data = data[data.duan_value > 0]
+        # print("duan_data %s" % duan_data)
+        if len(duan_data) > 0:
+            ax.plot(np.array(duan_data.t), np.array(duan_data.duan_value), color='b', linewidth=2)
 
     plt.show()
 

@@ -101,6 +101,9 @@ class DataAccessLayer(object):
         Column('v_ma10', Numeric(20, 4)),
         Column('v_ma20', Numeric(20, 4)),
         Column('turnover', Numeric(12, 4)),
+        Column('diff', Numeric(12, 4)),
+        Column('dea', Numeric(12, 4)),
+        Column('macd', Numeric(12, 4)),
         Column('code', String(6)),
         Column('ktype', String(6)), # K线周期
         Column('type', String(6)),  # 当前K线与后K线形成up还是down关系
@@ -110,6 +113,7 @@ class DataAccessLayer(object):
         Column('bi_to_be', Numeric(12, 4)), # 可能的笔节点的值
         Column('bi_value', Numeric(12, 4)), # 确定的笔节点的值
         Column('duan_value', Numeric(12, 4)), # 段节点的值
+        Column('operate', String(6)),
         Index('ix_get_hist_data', 'code', 'date', 'ktype', unique=True),
     )
 
@@ -131,6 +135,9 @@ class DataAccessLayer(object):
         Column('v_ma5', Numeric(20, 4)),
         Column('v_ma10', Numeric(20, 4)),
         Column('v_ma20', Numeric(20, 4)),
+        Column('diff', Numeric(12, 4)),
+        Column('dea', Numeric(12, 4)),
+        Column('macd', Numeric(12, 4)),
         Column('code', String(6)),
         Column('ktype', String(6), default='D'), # K线周期
         Column('type', String(6)),  # 当前K线与后K线形成up还是down关系
@@ -140,6 +147,7 @@ class DataAccessLayer(object):
         Column('bi_to_be', Numeric(12, 4)), # 可能的笔节点的值
         Column('bi_value', Numeric(12, 4)), # 确定的笔节点的值
         Column('duan_value', Numeric(12, 4)), # 段节点的值
+        Column('operate', String(6)),
         Index('ix_get_hist_data', 'code', 'date', 'ktype', unique=True),
     )
 

@@ -98,6 +98,7 @@ def h_data(code_list):
     for code in code_list:
         df = ts.get_h_data(code)
         df['code'] = code
+        df['ktype'] = 'D'
         logging.info("getting h data of %s" % (code))
         try:
             df.to_sql('get_h_data', dal.engine, if_exists='append', index=True)
@@ -116,6 +117,7 @@ def hist_data(code_list):
             hist_data['code'] = code
             hist_data['ktype'] = ktype
         try:
+            logging.info("getting h data of %s" % (code))
             hist_data.to_sql('get_hist_data', dal.engine, if_exists='append', index=True)
         except IntegrityError as e:
             logging.error("IntegrityError")
@@ -125,6 +127,6 @@ def hist_data(code_list):
 
 if __name__ == '__main__':
     basic_data()
-    h_data(['002675'])
-    hist_data(['002675'])
+    h_data(['002695'])
+    hist_data(['002695'])
 

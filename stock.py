@@ -11,6 +11,8 @@ import json
 import os
 
 import tushare as ts
+import talib as ta
+import numpy as np
 import datetime
 import pandas as pd
 from sqlalchemy import and_
@@ -55,7 +57,7 @@ class Stock(object):
         self.code = code
         if self.code is None:
             self.code = 'sh'
-        self._prepare_hist_data()
+        # self._prepare_hist_data()
 
     def _localise_hist_data(self, ktype = None):
         """利用tushare获取数据并存到本地数据库 """
@@ -94,11 +96,11 @@ class Stock(object):
             except Exception as e:
                 raise e
 
-    def get_hist_data(self, start = None, end = None, ktype = '30'):
+    def get_hist_data(self, start = None, end = None, ktype = 'D'):
         """Get data from local database"""
         if start is None:
             now = datetime.datetime.now()
-            delta = datetime.timedelta(days = 7)
+            delta = datetime.timedelta(days = 300)
             start = str(now - delta)
             start = datetime.datetime.strftime(now - delta, '%Y-%m-%d %H:%M:%S')
         if end is None:
@@ -106,13 +108,16 @@ class Stock(object):
         if ktype=='D':
             sql = """select * from get_h_data
             where code= '%s'
-            and date >= '%s' and date <= '%s'""" % (self.code, start, end)
+            and date >= '%s' and date <= '%s'
+            order by date""" % (self.code, start, end)
         else:
             sql = """select * from get_hist_data
             where code= '%s'
             and date >= '%s' and date <= '%s'
-            and ktype= '%s'""" % (self.code, start, end, ktype)
+            and ktype= '%s'
+            order by date""" % (self.code, start, end, ktype)
         data = pd.read_sql_query( sql, dal.engine )
+        data.sort_values(by=['date'], ascending=True, inplace=True)
         data.set_index('date', drop=False, inplace=True)
         return data
 
@@ -131,6 +136,14 @@ class Stock(object):
                         )
                 ).\
                 values(type= bindparam('_type'))
+            stmt1 = dal.get_h_data.update().\
+                where(
+                    and_(dal.get_h_data.c.code == bindparam('s_code'),
+                         dal.get_h_data.c.date == bindparam('p_date'),
+                         dal.get_h_data.c.ktype == bindparam('s_ktype')
+                        )
+                ).\
+                values(type= bindparam('_type'))
             u_data = []
             tmp = {}
             for i in range(len(d1)):
@@ -141,7 +154,9 @@ class Stock(object):
                 u_data.append(tmp)
                 tmp = {}
             us = dal.connection.execute(stmt, u_data)
-            logging.info("%s row's type updated" % us.rowcount)
+            us1 = dal.connection.execute(stmt1, u_data)
+            logging.info("%s row's type updated in get_hist_data" % us.rowcount)
+            logging.info("%s row's type updated in get_h_data" % us1.rowcount)
 
         #
         d2 = czsc.find_possible_ding_di(d1)
@@ -155,6 +170,14 @@ class Stock(object):
                         )
                 ).\
                 values( fenxing = bindparam('_fenxing'))
+            stmt1 = dal.get_h_data.update().\
+                where(
+                    and_(dal.get_h_data.c.code == bindparam('s_code'),
+                         dal.get_h_data.c.date == bindparam('p_date'),
+                         dal.get_h_data.c.ktype == bindparam('s_ktype')
+                        )
+                ).\
+                values( fenxing = bindparam('_fenxing'))
             u_data = []
             tmp = {}
             for i in range(len(d2)):
@@ -165,7 +188,9 @@ class Stock(object):
                 u_data.append(tmp)
                 tmp = {}
             us = dal.connection.execute(stmt, u_data)
-            logging.info("%s row's fenxing updated" % us.rowcount)
+            us1 = dal.connection.execute(stmt1, u_data)
+            logging.info("%s row's fenxing updated in get_hist_data" % us.rowcount)
+            logging.info("%s row's fenxing updated in get_h_data" % us1.rowcount)
 
         d3 = czsc.tag_bi_line(d2)
         d3 = d3[(d3.bi_value>0)]
@@ -175,6 +200,14 @@ class Stock(object):
                     and_(dal.get_hist_data.c.code == bindparam('s_code'),
                          dal.get_hist_data.c.date == bindparam('p_date'),
                          dal.get_hist_data.c.ktype == bindparam('s_ktype')
+                        )
+                ).\
+                values( bi_value= bindparam('_bi_value'))
+            stmt1 = dal.get_h_data.update().\
+                where(
+                    and_(dal.get_h_data.c.code == bindparam('s_code'),
+                         dal.get_h_data.c.date == bindparam('p_date'),
+                         dal.get_h_data.c.ktype == bindparam('s_ktype')
                         )
                 ).\
                 values( bi_value= bindparam('_bi_value'))
@@ -188,11 +221,129 @@ class Stock(object):
                 u_data.append(tmp)
                 tmp = {}
             us = dal.connection.execute(stmt, u_data)
-            logging.info("%s row's bi_value updated" % us.rowcount)
+            us1 = dal.connection.execute(stmt1, u_data)
+            logging.info("%s row's bi_value updated in get_hist_data" % us.rowcount)
+            logging.info("%s row's bi_value updated in get_h_data" % us1.rowcount)
+
+        d4 = d3[(d3.bi_to_be > 0)]
+        if len(d4) > 0:
+            stmt = dal.get_hist_data.update().\
+                where(
+                    and_(dal.get_hist_data.c.code == bindparam('s_code'),
+                         dal.get_hist_data.c.date == bindparam('p_date'),
+                         dal.get_hist_data.c.ktype == bindparam('s_ktype')
+                        )
+                ).\
+                values( bi_value= bindparam('_bi_value'))
+            stmt1 = dal.get_h_data.update().\
+                where(
+                    and_(dal.get_h_data.c.code == bindparam('s_code'),
+                         dal.get_h_data.c.date == bindparam('p_date'),
+                         dal.get_h_data.c.ktype == bindparam('s_ktype')
+                        )
+                ).\
+                values( bi_value= bindparam('_bi_value'))
+            u_data = []
+            tmp = {}
+            for i in range(len(d4)):
+                tmp['s_code'] = d4.ix[i, 'code']
+                tmp['p_date'] = str(d4.ix[i, 'date'])
+                tmp['s_ktype'] = str(d4.ix[i, 'ktype'])
+                tmp['_bi_value'] = str(d4.ix[i, 'bi_value'])
+                u_data.append(tmp)
+                tmp = {}
+            us = dal.connection.execute(stmt, u_data)
+            us1 = dal.connection.execute(stmt1, u_data)
+            logging.info("%s row's bi_to_be updated in get_hist_data" % us.rowcount)
+            logging.info("%s row's bi_to_be updated in get_h_data" % us1.rowcount)
+
+    def add_talib_data(self, data):
+        data['date'] = data.index
+        #
+        if len(data) < 35:
+            logging.info("Data length less than 35")
+        else:
+            data['ma5'] = ta.MA(np.array(data['close']), timeperiod=5, matype=0)
+            data['ma10'] = ta.MA(np.array(data['close']), timeperiod=10, matype=0)
+            data['ma20'] = ta.MA(np.array(data['close']), timeperiod=20, matype=0)
+            data['v_ma5'] = ta.MA(np.array(data['volume']), timeperiod=5, matype=0)
+            data['v_ma10'] = ta.MA(np.array(data['volume']), timeperiod=10, matype=0)
+            data['v_ma20'] = ta.MA(np.array(data['volume']), timeperiod=20, matype=0)
+            diff, dea, macd = ta.MACD(np.array(data['close']), fastperiod=12, slowperiod=26, signalperiod=9)
+            data['diff']=pd.Series(diff,index=data.index)
+            data['dea']=pd.Series(dea,index=data.index)
+            data['macd']=pd.Series(macd,index=data.index)
+
+            data = data[~(np.isnan(data['ma5']) |
+                          np.isnan(data['ma10']) |
+                          np.isnan(data['ma20']) |
+                          np.isnan(data['v_ma5']) |
+                          np.isnan(data['v_ma10']) |
+                          np.isnan(data['v_ma20']) |
+                          np.isnan(data['diff']) |
+                          np.isnan(data['dea']) |
+                          np.isnan(data['macd'])
+                        )]
+            if len(data) > 0:
+                stmt = dal.get_hist_data.update().\
+                    where(
+                        and_(dal.get_hist_data.c.code == bindparam('s_code'),
+                             dal.get_hist_data.c.date == bindparam('p_date'),
+                             dal.get_hist_data.c.ktype == bindparam('s_ktype')
+                            )
+                    ).\
+                    values(ma5= bindparam('_ma5'),
+                        ma10= bindparam('_ma10'),
+                        ma20= bindparam('_ma20'),
+                        v_ma5= bindparam('v_ma5'),
+                        v_ma10 = bindparam('v_ma10'),
+                        v_ma20 = bindparam('v_ma20'),
+                        diff = bindparam('_diff'),
+                        dea = bindparam('_dea'),
+                        macd = bindparam('_macd'))
+
+                stmt1 = dal.get_h_data.update().\
+                    where(
+                        and_(dal.get_h_data.c.code == bindparam('s_code'),
+                             dal.get_h_data.c.date == bindparam('p_date'),
+                             dal.get_h_data.c.ktype == bindparam('s_ktype')
+                            )
+                    ).\
+                    values(ma5= bindparam('_ma5'),
+                        ma10= bindparam('_ma10'),
+                        ma20= bindparam('_ma20'),
+                        v_ma5= bindparam('v_ma5'),
+                        v_ma10 = bindparam('v_ma10'),
+                        v_ma20 = bindparam('v_ma20'),
+                        diff = bindparam('_diff'),
+                        dea = bindparam('_dea'),
+                        macd = bindparam('_macd'))
+                u_data = []
+                tmp = {}
+                for i in range(len(data)):
+                    tmp['s_code'] = data.ix[i, 'code']
+                    tmp['p_date'] = str(data.ix[i, 'date'])
+                    tmp['s_ktype'] = str(data.ix[i, 'ktype'])
+                    tmp['_ma5'] = str(data.ix[i, 'ma5'])
+                    tmp['_ma10'] = str(data.ix[i, 'ma10'])
+                    tmp['_ma20'] = str(data.ix[i, 'ma20'])
+                    tmp['v_ma5'] = str(data.ix[i, 'v_ma5'])
+                    tmp['v_ma10'] = str(data.ix[i, 'v_ma10'])
+                    tmp['v_ma20'] = str(data.ix[i, 'v_ma20'])
+                    tmp['_diff'] = str(data.ix[i, 'diff'])
+                    tmp['_dea'] = str(data.ix[i, 'dea'])
+                    tmp['_macd'] = str(data.ix[i, 'macd'])
+                    u_data.append(tmp)
+                    tmp = {}
+                us = dal.connection.execute(stmt, u_data)
+                us1 = dal.connection.execute(stmt1, u_data)
+                logging.info("%s row's ma5 updated in get_hist_data" % us.rowcount)
+                logging.info("%s row's ma5 updated in get_h_data" % us1.rowcount)
 
 
 if __name__ == '__main__':
-    s = Stock('sh')
-    d = s.get_hist_data(start='2016-01-01', ktype='5')
+    s = Stock('002695')
+    d = s.get_hist_data(start='2016-01-01', ktype='D')
     s.add_czsc_data(d)
-    czsc.plot_data(d, single=True, ktype='5')
+    s.add_talib_data(d)
+    czsc.plot_data3(d, single=True, ktype='D')

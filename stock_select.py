@@ -5,6 +5,7 @@
 # mail: bill_law6@163.com
 # Created Time: Mon 07 Nov 2016 10:48:52 AM CST
 
+import time
 import tushare as ts
 import datetime
 import pandas as pd
@@ -25,7 +26,8 @@ def stock_select_tiantian(totals_limit=15000, reservedPerShare_limit=2, esp_limi
     esp 每股收益
     """
     stocks = pd.read_sql_table('get_stock_basics', dal.engine)
-    return stocks[(stocks.totals < totals_limit) & (stocks.esp > esp_limit) & (stocks.reservedPerShare > reservedPerShare_limit) & (stocks.bvps > bvps_limit)]
+    stock_list = stocks[(stocks.totals < totals_limit) & (stocks.esp > esp_limit) & (stocks.reservedPerShare > reservedPerShare_limit) & (stocks.bvps > bvps_limit)]
+    return list(stock_list['code'])
 
 def limitup_count_filter(stocks=None, duration=30, count_limit=3, continuous=True):
     """ 找出duration天内连续涨停数大于count数目的股票"""
@@ -57,7 +59,8 @@ def limitup_count_filter(stocks=None, duration=30, count_limit=3, continuous=Tru
                 # continue
                 print("###########################################################################")
                 break
-    return stocks[stocks.limit_count == ('enough %s' % count_limit)]
+    stock_list = stocks[stocks.limit_count == ('enough %s' % count_limit)]
+    return list(stock_list['code'])
 
 def fltp_slht_select(stocks, duration=30):
     d_delta = datetime.timedelta(days=duration)
@@ -70,11 +73,14 @@ def fltp_slht_select(stocks, duration=30):
     import stock_get_data as sgd
     sgd.get_trade_data(stocks)
 
-def basic_select():
-    s = select([dal.get_stock_basics, dal.get_today_all]).\
+def basic_select(date=None):
+    today = time.strftime('%Y-%m-%d', time.localtime())
+    date = date or today
+    s = select([dal.get_stock_basics.c.code, dal.get_stock_basics.c.name]).\
             where( and_((dal.get_stock_basics.c.code == dal.get_today_all.c.code),
+                    (dal.get_today_all.c.date < date),
                     (dal.get_today_all.c.turnoverratio > 1.5),
-                    (dal.get_today_all.c.turnoverratio < 4),
+                    (dal.get_today_all.c.turnoverratio < 10),
                     # (dal.get_today_all.c.per > 35),
                     # (dal.get_today_all.c.per < 65),
                     # (dal.get_stock_basics.c.pb > 3),
@@ -84,13 +90,13 @@ def basic_select():
                     (dal.get_stock_basics.c.profit > 0),
                     # (dal.get_stock_basics.c.totals > 1.4),
                     (dal.get_stock_basics.c.totals < 8)
-                    ))
+                    )).distinct()
     rs = dal.connection.execute(s)
     stock_list = []
     for row in rs:
-        print("%s, %s" % (row[1], row[2]))
-        print("%s stock seleted" % rs.rowcount)
-        stock_list.append(row[1])
+        print("%s, %s" % (row[0], row[1]))
+        stock_list.append(row[0])
+    print("%s stock seleted" % rs.rowcount)
     return stock_list
 
 def main():
