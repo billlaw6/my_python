@@ -62,7 +62,11 @@ def limitup_count_filter(stocks=None, duration=30, count_limit=3, continuous=Tru
     stock_list = stocks[stocks.limit_count == ('enough %s' % count_limit)]
     return list(stock_list['code'])
 
-def fltp_slht_select(stocks, duration=30):
+def fltp_slht_select(stocks, duration=30, count_limit=2):
+    """
+    连续至少count_limit根K线交易量超过5日均线50%，价格跌时，交易量跌回5日均线
+    000663
+    """
     d_delta = datetime.timedelta(days=duration)
     now = datetime.datetime.now()
     start = now - d_delta

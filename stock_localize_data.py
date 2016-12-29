@@ -96,24 +96,44 @@ def basic_data():
 def h_data(code_list):
     """利用tushare获取数据并存到本地数据库 """
     for code in code_list:
-        df = ts.get_h_data(code)
-        df['code'] = code
-        df['ktype'] = 'D'
-        logging.info("getting h data of %s" % (code))
-        try:
-            df.to_sql('get_h_data', dal.engine, if_exists='append', index=True)
-            logging.info("h data of %s localized" % (code))
-        except IntegrityError as e:
-            logging.error("IntegrityError in h_data")
-        except Exception as e:
-            logging.error("Exception caught in h_data %s" % e)
-            raise e
+        sql = """select max(date) as max_date from get_h_data
+                where code = '%s'""" % (code)
+        result = pd.read_sql_query(sql, dal.engine)
+        # pandas Timestamp
+        max_date_ts = result.ix[0, 0]
+        if (max_date_ts is not None and max_date_ts != 'None'):
+            if str(max_date) != time.strftime('%Y-%m-%d', time.localtime()):
+                df = ts.get_h_data(code)
+                df['code'] = code
+                df['ktype'] = 'D'
+                logging.info("getting h data of %s" % (code))
+                try:
+                    df.to_sql('get_h_data', dal.engine, if_exists='append', index=True)
+                    logging.info("h data of %s localized" % (code))
+                except IntegrityError as e:
+                    logging.error("IntegrityError in h_data")
+                except Exception as e:
+                    logging.error("Exception caught in h_data %s" % e)
+                    raise e
 
 def hist_data(code_list):
     """利用tushare获取数据并存到本地数据库 """
     for code in code_list:
         for ktype in ['5', '30']:
-            hist_data = ts.get_hist_data(code = code, ktype=ktype)
+            sql = """select max(date) as max_date from get_hist_data
+                    where code = '%s'
+                    and ktype= '%s'""" % (code, ktype)
+            result = pd.read_sql_query(sql, dal.engine)
+            # pandas Timestamp
+            max_date_ts = result.ix[0, 0]
+            if (max_date_ts is not None and max_date_ts != 'None'):
+                max_date = max_date_ts.to_pydatetime()
+                delta = datetime.timedelta(seconds=1)
+                start_date = str(max_date + delta)
+                hist_data = ts.get_hist_data(code = code, start=start_date, ktype=ktype)
+            else:
+                hist_data = ts.get_hist_data(code = code, ktype=ktype)
+            
             hist_data['code'] = code
             hist_data['ktype'] = ktype
         try:

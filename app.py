@@ -40,9 +40,10 @@ def setup_logging(
     else:
         logging.basicConfig(level=default_level)
 
+
 stock_list = ss.basic_select()
 ls = os.linesep
-with open('./selected.EBK', 'w') as f:
+with open('./basic_selected.EBK', 'w') as f:
     for stock in stock_list:
         f.write(stock + ls)
 
@@ -53,11 +54,13 @@ try:
 except URLError as e:
     logging.error("No internet access, check it!")
 
-#rs = []
-#for code in len(stock_list):
-    #s = Stock(code)
-    #s.add_czsc_data(s.get_hist_data())
-    #rs.append(s)
+rs = []
+for code in len(stock_list):
+    s = Stock(code)
+    s.add_czsc_data(s.get_hist_data())
+    rs.append(s)
+
+
 
 
 

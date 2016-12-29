@@ -117,7 +117,10 @@ class Stock(object):
             and ktype= '%s'
             order by date""" % (self.code, start, end, ktype)
         data = pd.read_sql_query( sql, dal.engine )
-        data.sort_values(by=['date'], ascending=True, inplace=True)
+        try:
+            data.sort_values(by=['date'], ascending=True, inplace=True)
+        except AttributeError as e:
+            data.sort(['date'], ascending=True, inplace=True)
         data.set_index('date', drop=False, inplace=True)
         return data
 
@@ -273,6 +276,8 @@ class Stock(object):
             data['diff']=pd.Series(diff,index=data.index)
             data['dea']=pd.Series(dea,index=data.index)
             data['macd']=pd.Series(macd,index=data.index)
+            data['price_change']=data['close']-data['close'].shift(1)
+            data['p_change']=(data['close']-data['close'].shift(1))/data['close'].shift(1)
 
             data = data[~(np.isnan(data['ma5']) |
                           np.isnan(data['ma10']) |
@@ -282,7 +287,9 @@ class Stock(object):
                           np.isnan(data['v_ma20']) |
                           np.isnan(data['diff']) |
                           np.isnan(data['dea']) |
-                          np.isnan(data['macd'])
+                          np.isnan(data['macd']) |
+                          np.isnan(data['price_change']) |
+                          np.isnan(data['p_change'])
                         )]
             if len(data) > 0:
                 stmt = dal.get_hist_data.update().\
@@ -300,7 +307,9 @@ class Stock(object):
                         v_ma20 = bindparam('v_ma20'),
                         diff = bindparam('_diff'),
                         dea = bindparam('_dea'),
-                        macd = bindparam('_macd'))
+                        macd = bindparam('_macd'),
+                        price_change = bindparam('_price_change'),
+                        p_change = bindparam('_p_change'))
 
                 stmt1 = dal.get_h_data.update().\
                     where(
@@ -317,7 +326,9 @@ class Stock(object):
                         v_ma20 = bindparam('v_ma20'),
                         diff = bindparam('_diff'),
                         dea = bindparam('_dea'),
-                        macd = bindparam('_macd'))
+                        macd = bindparam('_macd'),
+                        price_change = bindparam('_price_change'),
+                        p_change = bindparam('_p_change'))
                 u_data = []
                 tmp = {}
                 for i in range(len(data)):
@@ -333,6 +344,8 @@ class Stock(object):
                     tmp['_diff'] = str(data.ix[i, 'diff'])
                     tmp['_dea'] = str(data.ix[i, 'dea'])
                     tmp['_macd'] = str(data.ix[i, 'macd'])
+                    tmp['_price_change'] = str(data.ix[i, 'price_change'])
+                    tmp['_p_change'] = str(data.ix[i, 'p_change'])
                     u_data.append(tmp)
                     tmp = {}
                 us = dal.connection.execute(stmt, u_data)
