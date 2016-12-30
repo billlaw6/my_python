@@ -10,9 +10,13 @@ import logging
 import logging.config
 import json
 
+import pandas as pd
+
 import stock_select as ss
 import stock_localize_data as sld
 from stock import Stock
+from db_core import dal
+dal.db_init()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -55,7 +59,7 @@ except URLError as e:
     logging.error("No internet access, check it!")
 
 rs = []
-for code in len(stock_list):
+for code in stock_list:
     s = Stock(code)
     s.add_czsc_data(s.get_hist_data())
     rs.append(s)

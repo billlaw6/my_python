@@ -7,11 +7,13 @@
 
 import os
 import time
+import datetime
 import logging
 import logging.config
 import json
 
 import tushare as ts
+import pandas as pd
 from sqlalchemy.exc import IntegrityError
 # from sqlalchemy.types import CHAR
 
@@ -102,7 +104,10 @@ def h_data(code_list):
         # pandas Timestamp
         max_date_ts = result.ix[0, 0]
         if (max_date_ts is not None and max_date_ts != 'None'):
-            if str(max_date) != time.strftime('%Y-%m-%d', time.localtime()):
+            max_date = datetime.datetime.strftime(max_date_ts.to_pydatetime(), '%Y-%m-%d')
+            if max_date != time.strftime('%Y-%m-%d', time.localtime()):
+                print(max_date)
+                print(time.strftime('%Y-%m-%d', time.localtime()))
                 df = ts.get_h_data(code)
                 df['code'] = code
                 df['ktype'] = 'D'
@@ -115,6 +120,20 @@ def h_data(code_list):
                 except Exception as e:
                     logging.error("Exception caught in h_data %s" % e)
                     raise e
+        else:
+            df = ts.get_h_data(code)
+            df['code'] = code
+            df['ktype'] = 'D'
+            logging.info("getting h data of %s" % (code))
+            try:
+                df.to_sql('get_h_data', dal.engine, if_exists='append', index=True)
+                logging.info("h data of %s localized" % (code))
+            except IntegrityError as e:
+                logging.error("IntegrityError in h_data")
+            except Exception as e:
+                logging.error("Exception caught in h_data %s" % e)
+                raise e
+
 
 def hist_data(code_list):
     """利用tushare获取数据并存到本地数据库 """
